@@ -4,6 +4,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 jobs:
   rust-test:
     runs-on: ubuntu-latest
@@ -162,6 +163,7 @@ jobs:
         uses: superfly/flyctl-actions/setup-flyctl@1.5
       
       - name: Deploy to Fly.io
-        run: flyctl deploy --remote-only
+        run: flyctl deploy --remote-only ${FLY_APP_NAME:+--app "$FLY_APP_NAME"}
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_APP_NAME: ${{ vars.FLY_APP_NAME }}
