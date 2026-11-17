@@ -1,0 +1,16 @@
+[package]
+name = "admin-module"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+surrealdb.workspace = true
+tokio = { workspace = true, features = ["rt", "sync"] }
+argon2 = { version = "0.5.3", features = ["std"] }
+password-hash = { version = "0.5.0", features = ["getrandom"] }
+hmac = "0.12.1"
+sha2 = "0.10.9"
+hex = "0.4.3"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
