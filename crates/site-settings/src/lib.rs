@@ -52,13 +52,8 @@ impl Fontsource {
         }
     }
 
-    pub fn from_env() -> Fontsource {
-        let var =
-            |name: &str, default: &str| std::env::var(name).unwrap_or_else(|_| default.to_string());
-        Fontsource::new(
-            var("FONTSOURCE_API_URL", FONTSOURCE_API_URL),
-            var("FONTSOURCE_CDN_URL", FONTSOURCE_CDN_URL),
-        )
+    pub fn official() -> Fontsource {
+        Fontsource::new(FONTSOURCE_API_URL, FONTSOURCE_CDN_URL)
     }
 
     async fn details(&self, id: &str) -> Result<FontDetails, String> {

@@ -1,13 +1,14 @@
 use std::time::{Duration as StdDuration, Instant, SystemTime, UNIX_EPOCH};
 
 use actix_session::{
-    Session, SessionMiddleware,
+    Session, SessionExt, SessionMiddleware,
     config::{CookieContentSecurity, PersistentSession},
     storage::CookieSessionStore,
 };
 use actix_web::{
-    HttpRequest, HttpResponse, Responder,
+    FromRequest, HttpRequest, HttpResponse, Responder, ResponseError,
     cookie::{Key, SameSite, time::Duration},
+    dev::Payload,
     get,
     http::{StatusCode, header},
     middleware::DefaultHeaders,
@@ -108,6 +109,42 @@ pub fn configure_services(cfg: &mut web::ServiceConfig, admin: web::Data<AdminAu
     );
 }
 
+pub struct SignedInAdmin {
+    username: String,
+}
+
+#[derive(Debug)]
+pub struct SignInRequired;
+
+impl std::fmt::Display for SignInRequired {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("an admin session is required")
+    }
+}
+
+impl ResponseError for SignInRequired {
+    fn status_code(&self) -> StatusCode {
+        StatusCode::SEE_OTHER
+    }
+
+    fn error_response(&self) -> HttpResponse {
+        redirect("/admin/login")
+    }
+}
+
+impl FromRequest for SignedInAdmin {
+    type Error = SignInRequired;
+    type Future = std::future::Ready<Result<SignedInAdmin, SignInRequired>>;
+
+    fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
+        std::future::ready(
+            signed_in_admin(&req.get_session(), unix_now())
+                .map(|username| SignedInAdmin { username })
+                .ok_or(SignInRequired),
+        )
+    }
+}
+
 #[derive(Deserialize)]
 struct LoginForm {
     username: String,
@@ -118,17 +155,20 @@ struct LoginForm {
 async fn dashboard(
     app_state: web::Data<AppState>,
     admin: web::Data<AdminAuth>,
-    session: Session,
+    signed_in: SignedInAdmin,
     req: HttpRequest,
     locale: Locale,
 ) -> HttpResponse {
-    let Some(username) = signed_in_admin(&session, unix_now()) else {
-        return redirect("/admin/login");
-    };
-
     let values = FormValues::from_site(&app_state.site);
-    let content =
-        admin_settings::render(&app_state, &admin, &username, &values, &[], locale.texts()).await;
+    let content = admin_settings::render(
+        &app_state,
+        &admin,
+        &signed_in.username,
+        &values,
+        &[],
+        locale.texts(),
+    )
+    .await;
     page(&app_state, &req, StatusCode::OK, &content)
 }
 
@@ -136,7 +176,7 @@ async fn dashboard(
 async fn submit_settings(
     app_state: web::Data<AppState>,
     admin: web::Data<AdminAuth>,
-    session: Session,
+    signed_in: SignedInAdmin,
     req: HttpRequest,
     locale: Locale,
     form: web::Form<SettingsForm>,
@@ -150,9 +190,7 @@ async fn submit_settings(
             &message(t.admin_forbidden),
         );
     }
-    let Some(username) = signed_in_admin(&session, unix_now()) else {
-        return redirect("/admin/login");
-    };
+    let username = signed_in.username;
 
     let values = form.into_inner().into_values(&app_state.site);
     match admin_settings::issue_url(&app_state.site, &admin, &values, t).await {

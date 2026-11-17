@@ -15,7 +15,7 @@ async fn main() -> ExitCode {
         }
     };
 
-    match run(&args, &Fontsource::from_env()).await {
+    match run(&args, &Fontsource::official()).await {
         Ok(outcome) => {
             println!(
                 "Updated {} ({} font files added, {} unused font files or folders removed)",

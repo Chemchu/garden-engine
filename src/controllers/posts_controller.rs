@@ -1426,4 +1426,24 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn raw_html_and_script_links_in_posts_are_escaped() {
+        let md = "<script>alert(1)</script>\n\n\
+                  <img src=x onerror=alert(1)>\n\n\
+                  [click](javascript:alert(1)) [[<script>x</script>]]\n\n\
+                  > [!note] <b onclick=alert(1)>title</b>\n";
+        let (html, _) = render_post_html(md, &garden(), "id");
+
+        for unsafe_fragment in ["<script", "<img", "<b ", "javascript:"] {
+            assert!(
+                !html.contains(unsafe_fragment),
+                "{unsafe_fragment} in {html}"
+            );
+        }
+        assert!(
+            html.contains("&lt;script&gt;alert(1)&lt;/script&gt;"),
+            "{html}"
+        );
+    }
 }
