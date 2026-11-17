@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
 use actix_web::{HttpServer, web};
-use admin_module::AdminStore;
+use admin_module::{AdminStore, FontCatalog};
 use guslee::{
     controllers::{AppState, Integrations, admin_controller::AdminAuth},
     create_app,
     helpers::{self, CHESS_VARS, GAMES_VARS, MUSIC_VARS},
+    settings::GithubRepo,
     site_config::SiteConfig,
 };
 use log::info;
@@ -77,8 +78,13 @@ async fn main() -> std::io::Result<()> {
             let store = AdminStore::new(credentials)
                 .await
                 .unwrap_or_else(|e| panic!("Invalid admin configuration: {e}"));
+            let repository = GithubRepo::from_repo_source(&repo_source);
+            if repository.is_none() {
+                log::warn!("REPO_SOURCE is not a GitHub repository, settings cannot be sent");
+            }
             let on_fly = std::env::var_os("FLY_MACHINE_ID").is_some();
-            let admin = AdminAuth::new(store).trusting_fly_client_ip(on_fly);
+            let admin = AdminAuth::new(store, FontCatalog::default(), repository)
+                .trusting_fly_client_ip(on_fly);
             app_state = app_state.with_admin(admin);
         }
         None => info!("ADMIN_* variables are not set, the admin area is disabled"),

@@ -1,5 +1,6 @@
-use e2e::TestApp;
+use e2e::{ADMIN_PASSWORD, ADMIN_USERNAME, TestApp};
 use guslee::site_config::Features;
+use reqwest::{Client, header, redirect::Policy};
 
 const FEATURE_ROUTES: [&str; 6] = [
     "/news",
@@ -57,7 +58,7 @@ async fn features_can_be_switched_off_one_at_a_time() {
 }
 
 #[tokio::test]
-async fn sections_without_credentials_are_switched_off() {
+async fn sections_without_credentials_are_switched_off_but_stay_configured() {
     let app = TestApp::spawn_without_integrations().await;
 
     for path in ["/chess/stats/blitz", "/music/profile", "/steam"] {
@@ -70,4 +71,33 @@ async fn sections_without_credentials_are_switched_off() {
     assert!(!home.contains("chess-link") && !home.contains("music-link"));
     assert!(!home.contains("games-link"));
     assert!(home.contains("news-section"));
+
+    let admin = Client::builder()
+        .cookie_store(true)
+        .redirect(Policy::none())
+        .build()
+        .unwrap();
+    admin
+        .post(format!("{}/admin/login", app.address))
+        .header(header::ORIGIN, &app.address)
+        .form(&[("username", ADMIN_USERNAME), ("password", ADMIN_PASSWORD)])
+        .send()
+        .await
+        .unwrap();
+    let settings = admin
+        .get(format!("{}/admin", app.address))
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    assert!(settings.contains(r#"name="feature_chess" checked"#));
+    assert_eq!(
+        settings
+            .matches("(inactive: its credentials are not set)")
+            .count(),
+        3
+    );
 }
