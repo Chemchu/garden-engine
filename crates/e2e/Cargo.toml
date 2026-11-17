@@ -10,9 +10,10 @@ search-engine = { path = "../search-engine" }
 chess-module = { path = "../chess-module" }
 music-module = { path = "../music-module" }
 games-module = { path = "../games-module" }
+admin-module = { path = "../admin-module" }
 actix-web = "4.18.1"
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "io-util"] }
-reqwest = { workspace = true, features = ["query"] }
+reqwest = { workspace = true, features = ["query", "cookies", "form"] }
 wiremock = "0.6.5"
 serde_json.workspace = true
 

@@ -141,6 +141,16 @@ texts! {
     steam_top_played,
     steam_two_weeks,
     steam_total,
+    admin_title,
+    admin_login_title,
+    admin_username,
+    admin_password,
+    admin_login_submit,
+    admin_login_failed,
+    admin_login_throttled,
+    admin_forbidden,
+    admin_signed_in_as,
+    admin_logout,
 }
 
 pub fn fill(text: &str, value: impl Display) -> String {

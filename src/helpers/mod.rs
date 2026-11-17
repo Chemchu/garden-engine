@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 
+use admin_module::AdminCredentials;
+
+const ADMIN_VARS: [&str; 3] = ["ADMIN_USERNAME", "ADMIN_PASSWORD", "ADMIN_SECRET_KEY"];
+
 pub const CHESS_VARS: [&str; 2] = ["LICHESS_API_TOKEN", "LICHESS_USERNAME"];
 pub const MUSIC_VARS: [&str; 4] = [
     "SPOTIFY_CLIENT_ID",
@@ -49,6 +53,35 @@ fn section_credentials(
         collect_required_vars(vars, lookup).map(Some)
     } else {
         Ok(None)
+    }
+}
+
+pub fn read_admin_credentials() -> Option<AdminCredentials> {
+    admin_credentials(env_lookup).unwrap_or_else(|missing_vars| {
+        panic!(
+            "The admin area needs all of {}; missing: {}",
+            ADMIN_VARS.join(", "),
+            missing_vars.join(", ")
+        )
+    })
+}
+
+fn admin_credentials(
+    lookup: impl Fn(&str) -> Option<String>,
+) -> Result<Option<AdminCredentials>, Vec<&'static str>> {
+    let values = ADMIN_VARS.map(|var| lookup(var).filter(|value| !value.is_empty()));
+    match values {
+        [Some(username), Some(password), Some(secret_key)] => Ok(Some(AdminCredentials {
+            username,
+            password,
+            secret_key,
+        })),
+        [None, None, None] => Ok(None),
+        _ => Err(ADMIN_VARS
+            .into_iter()
+            .zip(values)
+            .filter_map(|(var, value)| value.is_none().then_some(var))
+            .collect()),
     }
 }
 
@@ -111,5 +144,34 @@ mod tests {
                 "SPOTIFY_REFRESH_TOKEN"
             ]
         );
+    }
+
+    #[test]
+    fn the_admin_area_is_off_without_admin_variables() {
+        assert!(admin_credentials(|_| None).unwrap().is_none());
+        assert!(
+            admin_credentials(|_| Some(String::new()))
+                .unwrap()
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn admin_credentials_are_read_when_all_variables_are_set() {
+        let credentials = admin_credentials(|var| Some(format!("{var}-value")))
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(credentials.username, "ADMIN_USERNAME-value");
+        assert_eq!(credentials.password, "ADMIN_PASSWORD-value");
+        assert_eq!(credentials.secret_key, "ADMIN_SECRET_KEY-value");
+    }
+
+    #[test]
+    fn partially_set_admin_variables_are_reported() {
+        let missing = admin_credentials(|var| (var == "ADMIN_USERNAME").then(|| "gus".to_string()))
+            .unwrap_err();
+
+        assert_eq!(missing, vec!["ADMIN_PASSWORD", "ADMIN_SECRET_KEY"]);
     }
 }

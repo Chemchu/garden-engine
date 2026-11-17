@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use actix_web::{HttpServer, web};
+use admin_module::AdminStore;
 use guslee::{
-    controllers::{AppState, Integrations},
+    controllers::{AppState, Integrations, admin_controller::AdminAuth},
     create_app,
     helpers::{self, CHESS_VARS, GAMES_VARS, MUSIC_VARS},
     site_config::SiteConfig,
@@ -67,8 +68,21 @@ async fn main() -> std::io::Result<()> {
     let search_engine = Arc::new(PostsSearchEngine::new(&repo_source, GARDEN_PATH).await);
     info!("Search engine created correctly");
 
-    let app_state = AppState::new(GARDEN_PATH, &site, search_engine, integrations);
+    let mut app_state = AppState::new(GARDEN_PATH, &site, search_engine, integrations);
     info!("Active sections: {:?}", app_state.features);
+
+    match helpers::read_admin_credentials() {
+        Some(credentials) => {
+            info!("Creating the admin account...");
+            let store = AdminStore::new(credentials)
+                .await
+                .unwrap_or_else(|e| panic!("Invalid admin configuration: {e}"));
+            let on_fly = std::env::var_os("FLY_MACHINE_ID").is_some();
+            let admin = AdminAuth::new(store).trusting_fly_client_ip(on_fly);
+            app_state = app_state.with_admin(admin);
+        }
+        None => info!("ADMIN_* variables are not set, the admin area is disabled"),
+    }
 
     let app_state = web::Data::new(app_state);
 

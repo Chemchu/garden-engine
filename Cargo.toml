@@ -28,7 +28,9 @@ search-engine = { path = "crates/search-engine" }
 chess-module = { path = "crates/chess-module" }
 music-module = { path = "crates/music-module" }
 games-module = { path = "crates/games-module" }
+admin-module = { path = "crates/admin-module" }
 site-config = { path = "crates/site-config" }
+actix-session = { version = "0.11.0", features = ["cookie-session"] }
 actix-files = "0.7.2"
 actix-web = "4.18.1"
 markdown = "1.0.0"
@@ -40,7 +42,7 @@ serde_json.workspace = true
 surrealdb.workspace = true
 cached = { version = "4.0.3", features = ["async", "time_stores"] }
 chrono.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["time"] }
 dotenvy = "0.15.7"
 
 [profile.dev]

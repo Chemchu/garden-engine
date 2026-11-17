@@ -2,7 +2,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 use actix_web::{HttpServer, web};
-use guslee::controllers::{AppState, Integrations};
+use admin_module::{AdminCredentials, AdminStore};
+use guslee::controllers::{AppState, Integrations, admin_controller::AdminAuth};
 use guslee::site_config::{DEFAULT_SITE_CONFIG_PATH, Features, STATIC_DIR, SiteConfig};
 use search_engine::PostsSearchEngine;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -17,6 +18,9 @@ pub const LICHESS_TOKEN: &str = "lichess-token";
 pub const SPOTIFY_REFRESH_TOKEN: &str = "spotify-refresh-token";
 pub const STEAM_API_KEY: &str = "steam-key";
 pub const STEAM_ID: &str = "76561190000000000";
+pub const ADMIN_USERNAME: &str = "garden-admin";
+pub const ADMIN_PASSWORD: &str = "a long and correct passphrase";
+pub const ADMIN_SECRET_KEY: &str = "e2e-secret-key-with-at-least-32-bytes";
 
 pub const GARDEN_PATH: &str = "crates/e2e/fixtures/garden";
 pub const REAL_GARDEN_PATH: &str = "garden";
@@ -56,24 +60,49 @@ fn enter_workspace_root() {
     std::env::set_current_dir(root).expect("enter workspace root");
 }
 
+fn admin_credentials() -> AdminCredentials {
+    AdminCredentials {
+        username: ADMIN_USERNAME.to_string(),
+        password: ADMIN_PASSWORD.to_string(),
+        secret_key: ADMIN_SECRET_KEY.to_string(),
+    }
+}
+
 impl TestApp {
     pub async fn spawn() -> TestApp {
         TestApp::spawn_with_garden(GARDEN_PATH).await
     }
 
     pub async fn spawn_with_garden(garden_path: &str) -> TestApp {
-        TestApp::spawn_with(garden_path, Features::default(), true).await
+        TestApp::spawn_with(garden_path, Features::default(), None).await
     }
 
     pub async fn spawn_with_features(features: Features) -> TestApp {
-        TestApp::spawn_with(GARDEN_PATH, features, true).await
+        TestApp::spawn_with(GARDEN_PATH, features, None).await
+    }
+
+    pub async fn spawn_with_admin() -> TestApp {
+        TestApp::spawn_with(GARDEN_PATH, Features::default(), Some(admin_credentials())).await
     }
 
     pub async fn spawn_without_integrations() -> TestApp {
-        TestApp::spawn_with(GARDEN_PATH, Features::default(), false).await
+        TestApp::spawn_with_options(GARDEN_PATH, Features::default(), None, false).await
     }
 
-    async fn spawn_with(garden_path: &str, features: Features, with_integrations: bool) -> TestApp {
+    async fn spawn_with(
+        garden_path: &str,
+        features: Features,
+        admin: Option<AdminCredentials>,
+    ) -> TestApp {
+        TestApp::spawn_with_options(garden_path, features, admin, true).await
+    }
+
+    async fn spawn_with_options(
+        garden_path: &str,
+        features: Features,
+        admin: Option<AdminCredentials>,
+        with_integrations: bool,
+    ) -> TestApp {
         enter_workspace_root();
 
         let lichess = MockServer::start().await;
@@ -117,12 +146,14 @@ impl TestApp {
         } else {
             Integrations::default()
         };
-        let app_state = web::Data::new(AppState::new(
-            garden_path,
-            &site,
-            Arc::new(search_engine),
-            integrations,
-        ));
+        let mut app_state =
+            AppState::new(garden_path, &site, Arc::new(search_engine), integrations);
+        if let Some(credentials) = admin {
+            let store = AdminStore::new(credentials).await.expect("valid admin");
+            let admin = AdminAuth::new(store).with_insecure_cookies();
+            app_state = app_state.with_admin(admin);
+        }
+        let app_state = web::Data::new(app_state);
 
         let server = HttpServer::new(move || guslee::create_app(app_state.clone()))
             .workers(1)
