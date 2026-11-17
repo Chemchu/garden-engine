@@ -55,7 +55,7 @@ debug = 1
 opt-level = 0
 
 [profile.release]
-lto = true
+lto = "thin"
 strip = true
 opt-level = 3
 panic = 'unwind'
