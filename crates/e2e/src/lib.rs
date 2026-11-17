@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 use actix_web::{HttpServer, web};
-use guslee::controllers::{AppState, PageShell};
-use guslee::site_config::{DEFAULT_SITE_CONFIG_PATH, STATIC_DIR, SiteConfig};
+use guslee::controllers::{AppState, Integrations};
+use guslee::site_config::{DEFAULT_SITE_CONFIG_PATH, Features, STATIC_DIR, SiteConfig};
 use search_engine::PostsSearchEngine;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use wiremock::MockServer;
@@ -62,6 +62,18 @@ impl TestApp {
     }
 
     pub async fn spawn_with_garden(garden_path: &str) -> TestApp {
+        TestApp::spawn_with(garden_path, Features::default(), true).await
+    }
+
+    pub async fn spawn_with_features(features: Features) -> TestApp {
+        TestApp::spawn_with(GARDEN_PATH, features, true).await
+    }
+
+    pub async fn spawn_without_integrations() -> TestApp {
+        TestApp::spawn_with(GARDEN_PATH, Features::default(), false).await
+    }
+
+    async fn spawn_with(garden_path: &str, features: Features, with_integrations: bool) -> TestApp {
         enter_workspace_root();
 
         let lichess = MockServer::start().await;
@@ -71,17 +83,20 @@ impl TestApp {
         let search_engine =
             PostsSearchEngine::new_with_endpoint("mem://", REPO_SOURCE, garden_path).await;
 
-        let site = SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).expect("valid site.toml");
+        let site = SiteConfig {
+            features,
+            ..SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).expect("valid site.toml")
+        };
 
-        let app_state = web::Data::new(AppState {
-            garden_path: garden_path.to_string(),
-            shell: PageShell::from_template_dir(APP_NAME, &site),
-            lichess_state: chess_module::LichessState::new(
-                LICHESS_TOKEN.to_string(),
-                LICHESS_USERNAME.to_string(),
-            )
-            .with_api_base_url(lichess.uri()),
-            spotify_state: Arc::new(tokio::sync::Mutex::new(
+        let integrations = Integrations {
+            lichess: Some(web::Data::new(
+                chess_module::LichessState::new(
+                    LICHESS_TOKEN.to_string(),
+                    LICHESS_USERNAME.to_string(),
+                )
+                .with_api_base_url(lichess.uri()),
+            )),
+            spotify: Some(web::Data::new(tokio::sync::Mutex::new(
                 music_module::SpotifyState::from_refresh_token(
                     "spotify-user".to_string(),
                     "spotify-client".to_string(),
@@ -89,14 +104,25 @@ impl TestApp {
                     SPOTIFY_REFRESH_TOKEN.to_string(),
                 )
                 .with_base_urls(spotify.uri(), spotify.uri()),
+            ))),
+            steam: Some(web::Data::new(
+                games_module::SteamState::new(STEAM_API_KEY.to_string(), STEAM_ID.to_string())
+                    .with_api_base_url(steam.uri()),
             )),
-            steam_state: games_module::SteamState::new(
-                STEAM_API_KEY.to_string(),
-                STEAM_ID.to_string(),
-            )
-            .with_api_base_url(steam.uri()),
-            post_search_engine: Arc::new(search_engine),
-        });
+        };
+
+        let integrations = if with_integrations {
+            integrations
+        } else {
+            Integrations::default()
+        };
+        let app_state = web::Data::new(AppState::new(
+            APP_NAME,
+            garden_path,
+            &site,
+            Arc::new(search_engine),
+            integrations,
+        ));
 
         let server = HttpServer::new(move || guslee::create_app(app_state.clone()))
             .workers(1)

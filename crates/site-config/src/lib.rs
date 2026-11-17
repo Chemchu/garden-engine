@@ -15,6 +15,42 @@ const MAX_FAMILY_LEN: usize = 64;
 #[serde(deny_unknown_fields)]
 pub struct SiteConfig {
     pub theme: Theme,
+    #[serde(default)]
+    pub features: Features,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct Features {
+    pub news: bool,
+    pub chess: bool,
+    pub music: bool,
+    pub games: bool,
+    pub schedule: bool,
+}
+
+impl Features {
+    pub fn entries(&self) -> [(&'static str, bool); 5] {
+        [
+            ("news", self.news),
+            ("chess", self.chess),
+            ("music", self.music),
+            ("games", self.games),
+            ("schedule", self.schedule),
+        ]
+    }
+}
+
+impl Default for Features {
+    fn default() -> Self {
+        Features {
+            news: true,
+            chess: true,
+            music: true,
+            games: true,
+            schedule: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -409,6 +445,40 @@ src = "fonts/tusker-grotesk/regular.woff2"
     fn the_committed_site_config_is_valid_and_its_fonts_exist() {
         let config = SiteConfig::load(REPO_SITE_CONFIG, REPO_STATIC_DIR);
         assert!(config.is_ok(), "{}", config.unwrap_err());
+    }
+
+    #[test]
+    fn features_default_to_enabled_and_can_be_switched_off() {
+        assert_eq!(valid().features, Features::default());
+        assert!(Features::default().chess && Features::default().schedule);
+
+        let raw = format!("{VALID}\n[features]\nchess = false\nschedule = false\n");
+        let features = SiteConfig::parse(&raw).unwrap().features;
+        assert!(!features.chess && !features.schedule);
+        assert!(features.news && features.music && features.games);
+    }
+
+    #[test]
+    fn feature_entries_follow_the_toml_keys() {
+        let features = Features {
+            music: false,
+            ..Features::default()
+        };
+        let raw = toml::to_string(&features).unwrap();
+
+        for (name, enabled) in features.entries() {
+            assert!(raw.contains(&format!("{name} = {enabled}")), "{name}");
+        }
+        assert_eq!(features.entries().len(), raw.lines().count());
+    }
+
+    #[test]
+    fn unknown_features_are_rejected() {
+        let raw = format!("{VALID}\n[features]\nspotify = false\n");
+        assert!(matches!(
+            SiteConfig::parse(&raw),
+            Err(SiteConfigError::Parse(_))
+        ));
     }
 
     #[test]

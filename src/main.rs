@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use actix_web::{HttpServer, web};
 use guslee::{
-    controllers::{AppState, PageShell},
-    create_app, helpers,
+    controllers::{AppState, Integrations},
+    create_app,
+    helpers::{self, CHESS_VARS, GAMES_VARS, MUSIC_VARS},
     site_config::SiteConfig,
 };
 use log::info;
@@ -23,40 +24,59 @@ async fn main() -> std::io::Result<()> {
     info!("Starting server...");
 
     info!("Loading environment variables...");
-    let env_vars = helpers::read_env_file();
-    let env_var = |name: &str| env_vars[name].clone();
+    helpers::load_env_file();
 
     info!("Loading site configuration...");
     let site = SiteConfig::from_env();
+    let configured = site.features;
+    let repo_source = helpers::read_required_var("REPO_SOURCE");
 
-    info!("Initializing Lichess, Spotify and Steam state...");
-    let lichess_state =
-        chess_module::LichessState::new(env_var("LICHESS_API_TOKEN"), env_var("LICHESS_USERNAME"));
-
-    let spotify_state = Arc::new(tokio::sync::Mutex::new(
-        music_module::SpotifyState::from_refresh_token(
-            env_var("SPOTIFY_USER_ID"),
-            env_var("SPOTIFY_CLIENT_ID"),
-            env_var("SPOTIFY_CLIENT_SECRET"),
-            env_var("SPOTIFY_REFRESH_TOKEN"),
+    info!("Initializing integrations...");
+    let integrations = Integrations {
+        lichess: helpers::read_section_credentials("chess", configured.chess, &CHESS_VARS).map(
+            |vars| {
+                web::Data::new(chess_module::LichessState::new(
+                    vars["LICHESS_API_TOKEN"].clone(),
+                    vars["LICHESS_USERNAME"].clone(),
+                ))
+            },
         ),
-    ));
-
-    let steam_state = games_module::SteamState::new(env_var("STEAM_API_KEY"), env_var("STEAM_ID"));
+        spotify: helpers::read_section_credentials("music", configured.music, &MUSIC_VARS).map(
+            |vars| {
+                web::Data::new(tokio::sync::Mutex::new(
+                    music_module::SpotifyState::from_refresh_token(
+                        vars["SPOTIFY_USER_ID"].clone(),
+                        vars["SPOTIFY_CLIENT_ID"].clone(),
+                        vars["SPOTIFY_CLIENT_SECRET"].clone(),
+                        vars["SPOTIFY_REFRESH_TOKEN"].clone(),
+                    ),
+                ))
+            },
+        ),
+        steam: helpers::read_section_credentials("games", configured.games, &GAMES_VARS).map(
+            |vars| {
+                web::Data::new(games_module::SteamState::new(
+                    vars["STEAM_API_KEY"].clone(),
+                    vars["STEAM_ID"].clone(),
+                ))
+            },
+        ),
+    };
 
     info!("Creating in-memory full-text search engine...");
-    let search_engine =
-        Arc::new(PostsSearchEngine::new(env_var("REPO_SOURCE").as_str(), GARDEN_PATH).await);
+    let search_engine = Arc::new(PostsSearchEngine::new(&repo_source, GARDEN_PATH).await);
     info!("Search engine created correctly");
 
-    let app_state = web::Data::new(AppState {
-        garden_path: GARDEN_PATH.to_string(),
-        shell: PageShell::from_template_dir("Gus' digital garden", &site),
-        lichess_state,
-        spotify_state,
-        steam_state,
-        post_search_engine: search_engine,
-    });
+    let app_state = AppState::new(
+        "Gus' digital garden",
+        GARDEN_PATH,
+        &site,
+        search_engine,
+        integrations,
+    );
+    info!("Active sections: {:?}", app_state.features);
+
+    let app_state = web::Data::new(app_state);
 
     info!("Server starting on port 3000");
 
