@@ -2,8 +2,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 use actix_web::{HttpServer, web};
-use admin_module::{AdminCredentials, AdminStore};
+use admin_module::{AdminCredentials, AdminStore, FontCatalog};
 use guslee::controllers::{AppState, Integrations, admin_controller::AdminAuth};
+use guslee::settings::GithubRepo;
 use guslee::site_config::{DEFAULT_SITE_CONFIG_PATH, Features, STATIC_DIR, SiteConfig};
 use search_engine::PostsSearchEngine;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -31,6 +32,7 @@ pub struct TestApp {
     pub lichess: MockServer,
     pub spotify: MockServer,
     pub steam: MockServer,
+    pub fonts: MockServer,
 }
 
 pub struct Response {
@@ -86,7 +88,13 @@ impl TestApp {
     }
 
     pub async fn spawn_without_integrations() -> TestApp {
-        TestApp::spawn_with_options(GARDEN_PATH, Features::default(), None, false).await
+        TestApp::spawn_with_options(
+            GARDEN_PATH,
+            Features::default(),
+            Some(admin_credentials()),
+            false,
+        )
+        .await
     }
 
     async fn spawn_with(
@@ -108,6 +116,7 @@ impl TestApp {
         let lichess = MockServer::start().await;
         let spotify = MockServer::start().await;
         let steam = MockServer::start().await;
+        let fonts = MockServer::start().await;
 
         let search_engine =
             PostsSearchEngine::new_with_endpoint("mem://", REPO_SOURCE, garden_path).await;
@@ -150,7 +159,12 @@ impl TestApp {
             AppState::new(garden_path, &site, Arc::new(search_engine), integrations);
         if let Some(credentials) = admin {
             let store = AdminStore::new(credentials).await.expect("valid admin");
-            let admin = AdminAuth::new(store).with_insecure_cookies();
+            let admin = AdminAuth::new(
+                store,
+                FontCatalog::new(fonts.uri()),
+                GithubRepo::from_repo_source(REPO_SOURCE),
+            )
+            .with_insecure_cookies();
             app_state = app_state.with_admin(admin);
         }
         let app_state = web::Data::new(app_state);
@@ -168,6 +182,7 @@ impl TestApp {
             lichess,
             spotify,
             steam,
+            fonts,
         }
     }
 

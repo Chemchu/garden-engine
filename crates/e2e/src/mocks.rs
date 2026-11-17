@@ -59,3 +59,35 @@ pub async fn mount_steam(app: &TestApp, owned_games: serde_json::Value, game_cou
         .mount(&app.steam)
         .await;
 }
+
+pub async fn mount_font_catalog(app: &TestApp) {
+    let font = |id: &str, family: &str, weights: &[u16], category: &str| {
+        json!({
+            "id": id,
+            "family": family,
+            "subsets": ["latin"],
+            "weights": weights,
+            "styles": ["normal"],
+            "category": category,
+            "type": "google",
+        })
+    };
+
+    Mock::given(method("GET"))
+        .and(path("/v1/fonts"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            font("inter", "Inter", &[400, 600, 700], "sans-serif"),
+            font("lora", "Lora", &[400, 700], "serif"),
+            json!({
+                "id": "iosevka",
+                "family": "Iosevka",
+                "subsets": ["latin"],
+                "weights": [400, 600],
+                "styles": ["normal"],
+                "category": "monospace",
+                "type": "other",
+            }),
+        ])))
+        .mount(&app.fonts)
+        .await;
+}

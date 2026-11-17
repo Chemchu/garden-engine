@@ -15,6 +15,7 @@ use crate::i18n::{LANG_PARAM, Locale, lang_query};
 use crate::site_config::{Features, Identity, SiteConfig};
 
 pub mod admin_controller;
+pub mod admin_settings;
 pub mod chess_controller;
 pub mod fallback_controller;
 pub mod feed_controller;

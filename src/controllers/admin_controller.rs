@@ -13,12 +13,14 @@ use actix_web::{
     middleware::DefaultHeaders,
     post, web,
 };
-use admin_module::{AdminStore, Admission, LoginThrottle, MAX_CREDENTIAL_BYTES};
+use admin_module::{AdminStore, Admission, FontCatalog, LoginThrottle, MAX_CREDENTIAL_BYTES};
 use maud::html;
 use serde::Deserialize;
 
+use crate::controllers::admin_settings::{self, FormValues, SettingsForm};
 use crate::controllers::{AppState, render_page};
-use crate::i18n::{Locale, Texts, fill};
+use crate::i18n::{Locale, Texts};
+use crate::settings::GithubRepo;
 
 pub const SESSION_COOKIE: &str = "guslee_admin";
 pub const SESSION_TTL_SECS: i64 = 4 * 60 * 60;
@@ -35,10 +37,12 @@ pub struct AdminAuth {
     throttle: LoginThrottle,
     secure_cookies: bool,
     trust_fly_client_ip: bool,
+    pub(crate) fonts: FontCatalog,
+    pub(crate) repository: Option<GithubRepo>,
 }
 
 impl AdminAuth {
-    pub fn new(store: AdminStore) -> AdminAuth {
+    pub fn new(store: AdminStore, fonts: FontCatalog, repository: Option<GithubRepo>) -> AdminAuth {
         AdminAuth {
             store,
             throttle: LoginThrottle::new(
@@ -49,6 +53,8 @@ impl AdminAuth {
             ),
             secure_cookies: true,
             trust_fly_client_ip: false,
+            fonts,
+            repository,
         }
     }
 
@@ -95,6 +101,7 @@ pub fn configure_services(cfg: &mut web::ServiceConfig, admin: web::Data<AdminAu
             .wrap(sessions)
             .wrap(security_headers)
             .service(dashboard)
+            .service(submit_settings)
             .service(login_page)
             .service(login)
             .service(logout),
@@ -110,6 +117,7 @@ struct LoginForm {
 #[get("")]
 async fn dashboard(
     app_state: web::Data<AppState>,
+    admin: web::Data<AdminAuth>,
     session: Session,
     req: HttpRequest,
     locale: Locale,
@@ -118,17 +126,46 @@ async fn dashboard(
         return redirect("/admin/login");
     };
 
+    let values = FormValues::from_site(&app_state.site);
+    let content =
+        admin_settings::render(&app_state, &admin, &username, &values, &[], locale.texts()).await;
+    page(&app_state, &req, StatusCode::OK, &content)
+}
+
+#[post("/settings")]
+async fn submit_settings(
+    app_state: web::Data<AppState>,
+    admin: web::Data<AdminAuth>,
+    session: Session,
+    req: HttpRequest,
+    locale: Locale,
+    form: web::Form<SettingsForm>,
+) -> HttpResponse {
     let t = locale.texts();
-    let content = html! {
-        div class="flex flex-col w-full gap-6 p-6 lg:p-8" {
-            h1 class="text-4xl text-primary-color" { (t.admin_title) }
-            p { (fill(t.admin_signed_in_as, &username)) }
-            (logout_form(t))
+    if !is_same_origin(&req) {
+        return page(
+            &app_state,
+            &req,
+            StatusCode::FORBIDDEN,
+            &message(t.admin_forbidden),
+        );
+    }
+    let Some(username) = signed_in_admin(&session, unix_now()) else {
+        return redirect("/admin/login");
+    };
+
+    let values = form.into_inner().into_values(&app_state.site);
+    match admin_settings::issue_url(&app_state.site, &admin, &values, t).await {
+        Ok(url) => {
+            log::info!("Admin {username} opened a site settings request");
+            redirect(&url)
+        }
+        Err(problems) => {
+            let content =
+                admin_settings::render(&app_state, &admin, &username, &values, &problems, t).await;
+            page(&app_state, &req, StatusCode::UNPROCESSABLE_ENTITY, &content)
         }
     }
-    .into_string();
-
-    page(&app_state, &req, StatusCode::OK, &content)
 }
 
 #[get("/login")]
@@ -261,7 +298,7 @@ fn login_content(t: &Texts, error: Option<&str>) -> String {
     .into_string()
 }
 
-fn logout_form(t: &Texts) -> maud::Markup {
+pub(crate) fn logout_form(t: &Texts) -> maud::Markup {
     html! {
         form method="post" action="/admin/logout" hx-boost="false" {
             button
