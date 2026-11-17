@@ -12,6 +12,7 @@ pub mod controllers;
 pub mod helpers;
 pub mod i18n;
 pub use site_config;
+pub use site_config::settings;
 
 pub fn create_app(
     app_state: web::Data<AppState>,

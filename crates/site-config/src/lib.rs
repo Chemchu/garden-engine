@@ -6,6 +6,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+pub mod settings;
+
 pub const DEFAULT_SITE_CONFIG_PATH: &str = "./site.toml";
 pub const STATIC_DIR: &str = "./static";
 const STATIC_URL_PREFIX: &str = "/_static";
