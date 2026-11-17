@@ -83,10 +83,11 @@ impl TestApp {
         let search_engine =
             PostsSearchEngine::new_with_endpoint("mem://", REPO_SOURCE, garden_path).await;
 
-        let site = SiteConfig {
+        let mut site = SiteConfig {
             features,
             ..SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).expect("valid site.toml")
         };
+        site.identity.name = APP_NAME.to_string();
 
         let integrations = Integrations {
             lichess: Some(web::Data::new(
@@ -117,7 +118,6 @@ impl TestApp {
             Integrations::default()
         };
         let app_state = web::Data::new(AppState::new(
-            APP_NAME,
             garden_path,
             &site,
             Arc::new(search_engine),

@@ -67,13 +67,7 @@ async fn main() -> std::io::Result<()> {
     let search_engine = Arc::new(PostsSearchEngine::new(&repo_source, GARDEN_PATH).await);
     info!("Search engine created correctly");
 
-    let app_state = AppState::new(
-        "Gus' digital garden",
-        GARDEN_PATH,
-        &site,
-        search_engine,
-        integrations,
-    );
+    let app_state = AppState::new(GARDEN_PATH, &site, search_engine, integrations);
     info!("Active sections: {:?}", app_state.features);
 
     let app_state = web::Data::new(app_state);

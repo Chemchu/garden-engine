@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::i18n::{LANG_PARAM, Locale, lang_query};
-use crate::site_config::{Features, SiteConfig};
+use crate::site_config::{Features, Identity, SiteConfig};
 
 pub mod chess_controller;
 pub mod fallback_controller;
@@ -66,7 +66,6 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(
-        app_name: &str,
         garden_path: &str,
         site: &SiteConfig,
         post_search_engine: Arc<PostsSearchEngine>,
@@ -82,7 +81,7 @@ impl AppState {
             garden_path: garden_path.to_string(),
             site: site.clone(),
             features,
-            shell: PageShell::from_template_dir(app_name, &shown),
+            shell: PageShell::from_template_dir(&shown),
             integrations: integrations.restricted_to(&features),
             post_search_engine,
         }
@@ -91,19 +90,33 @@ impl AppState {
 
 pub struct PageShell {
     app_name: String,
+    descriptions: HashMap<Locale, String>,
     templates: HashMap<Locale, String>,
 }
 
 impl PageShell {
-    pub fn new(app_name: &str, template: &str, site: &SiteConfig) -> PageShell {
+    pub fn new(template: &str, site: &SiteConfig) -> PageShell {
         let template = template
             .replace("{{THEME}}", &site.theme_style())
             .replace("{{NAV_DESKTOP}}", &desktop_nav(&site.features))
             .replace("{{NAV_MOBILE}}", &mobile_nav(&site.features))
-            .replace("{{SCHEDULE}}", &schedule_slot(&site.features));
+            .replace("{{SCHEDULE}}", &schedule_slot(&site.features))
+            .replace("{{FOOTER_LINKS}}", &footer_links(&site.identity));
 
         PageShell {
-            app_name: app_name.to_string(),
+            app_name: site.identity.name.clone(),
+            descriptions: Locale::ALL
+                .into_iter()
+                .map(|locale| {
+                    let description = site
+                        .identity
+                        .description
+                        .get(locale.as_str())
+                        .map(String::as_str)
+                        .unwrap_or(locale.texts().site_description);
+                    (locale, description.to_string())
+                })
+                .collect(),
             templates: Locale::ALL
                 .into_iter()
                 .map(|locale| (locale, localize_template(&template, locale)))
@@ -111,12 +124,12 @@ impl PageShell {
         }
     }
 
-    pub fn from_template_dir(app_name: &str, site: &SiteConfig) -> PageShell {
+    pub fn from_template_dir(site: &SiteConfig) -> PageShell {
         let template_path =
             std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
         let template = std::fs::read_to_string(format!("{template_path}/index.html"))
             .expect("Failed to read index.html template");
-        PageShell::new(app_name, &template, site)
+        PageShell::new(&template, site)
     }
 
     pub fn app_name(&self) -> &str {
@@ -124,7 +137,7 @@ impl PageShell {
     }
 
     pub fn description(&self, locale: Locale) -> &str {
-        locale.texts().site_description
+        &self.descriptions[&locale]
     }
 
     pub fn wrap(&self, content: &str, locale: Locale) -> String {
@@ -275,6 +288,21 @@ fn mobile_nav(features: &Features) -> String {
     maud::html! {
         @for link in nav_links(features) {
             (link.render(link.mobile_id, "cursor-pointer hover:text-primary-color whitespace-nowrap py-2"))
+        }
+    }
+    .into_string()
+}
+
+fn footer_links(identity: &Identity) -> String {
+    let class = "hover:text-primary-color";
+    maud::html! {
+        @for link in &identity.links {
+            a class=(class) target="_blank" rel="noopener noreferrer" href=(link.url) { (link.label) }
+        }
+        @if let Some(source_url) = &identity.source_url {
+            a class=(class) target="_blank" rel="noopener noreferrer" href=(source_url) {
+                (PreEscaped("{{t:footer_source}}"))
+            }
         }
     }
     .into_string()
@@ -488,7 +516,9 @@ mod tests {
     }
 
     fn shell(app_name: &str) -> PageShell {
-        PageShell::from_template_dir(app_name, &site())
+        let mut site = site();
+        site.identity.name = app_name.to_string();
+        PageShell::from_template_dir(&site)
     }
 
     const ALL_OFF: Features = Features {
@@ -630,7 +660,7 @@ mod tests {
     #[test]
     fn every_template_placeholder_is_filled_in_every_language() {
         for features in [Features::default(), ALL_OFF] {
-            let shell = PageShell::from_template_dir("Garden", &site_with(features));
+            let shell = PageShell::from_template_dir(&site_with(features));
             for locale in Locale::ALL {
                 let html = shell.wrap("", locale);
                 assert!(!html.contains("{{"), "{} {features:?}", locale.as_str());
@@ -669,14 +699,60 @@ mod tests {
     }
 
     #[test]
+    fn the_footer_lists_the_configured_links_and_source() {
+        let page = shell("Garden").wrap("", Locale::Es);
+
+        assert!(page.contains(r#"href="https://www.github.com/Chemchu">GITHUB</a>"#));
+        assert!(page.contains(r#"href="https://www.linkedin.com/in/gustavo-lee">LINKEDIN</a>"#));
+        assert!(page.contains(r#"href="https://github.com/Chemchu/guslee">"#));
+        assert!(!page.contains("{{FOOTER_LINKS}}"));
+    }
+
+    #[test]
+    fn a_site_without_identity_uses_neutral_defaults() {
+        let site = SiteConfig {
+            identity: Identity::default(),
+            ..site()
+        };
+        let shell = PageShell::from_template_dir(&site);
+        let page = shell.wrap("", Locale::En);
+
+        assert_eq!(shell.app_name(), "My digital garden");
+        assert_eq!(
+            shell.description(Locale::Es),
+            Locale::Es.texts().site_description
+        );
+        assert!(page.contains("<title>My digital garden</title>"));
+        assert!(!page.contains("linkedin") && !page.contains("Chemchu"));
+        assert!(!page.contains(&format!(">{}<", Locale::En.texts().footer_source)));
+    }
+
+    #[test]
+    fn configured_descriptions_replace_the_default_per_language() {
+        let mut site = site();
+        site.identity.name = "Ana & co".to_string();
+        site.identity.description =
+            std::collections::BTreeMap::from([("es".to_string(), "Notas de <Ana>".to_string())]);
+        let shell = PageShell::from_template_dir(&site);
+
+        assert_eq!(shell.description(Locale::Es), "Notas de <Ana>");
+        assert_eq!(
+            shell.description(Locale::En),
+            Locale::En.texts().site_description
+        );
+        let page = shell.wrap("", Locale::Es);
+        assert!(page.contains(r#"<meta name="description" content="Notas de &lt;Ana&gt;">"#));
+        assert!(page.contains("<title>Ana &amp; co</title>"));
+    }
+
+    #[test]
     fn disabled_features_leave_the_navigation() {
         let features = Features {
             chess: false,
             schedule: false,
             ..Features::default()
         };
-        let page =
-            PageShell::from_template_dir("Garden", &site_with(features)).wrap("", Locale::En);
+        let page = PageShell::from_template_dir(&site_with(features)).wrap("", Locale::En);
 
         assert!(!page.contains("/chess/stats"));
         assert!(!page.contains("chess-link"));
