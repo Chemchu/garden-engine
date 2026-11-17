@@ -4738,6 +4738,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "site-settings"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.13.5",
+ "serde",
+ "serde_json",
+ "site-config",
+ "tempfile",
+ "tokio",
+ "toml",
+ "wiremock",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"

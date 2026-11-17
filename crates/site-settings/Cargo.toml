@@ -1,0 +1,17 @@
+[package]
+name = "site-settings"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+site-config = { path = "../site-config" }
+reqwest.workspace = true
+serde.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+toml = "1.2.1"
+
+[dev-dependencies]
+wiremock = "0.6.5"
+serde_json.workspace = true
+tempfile.workspace = true

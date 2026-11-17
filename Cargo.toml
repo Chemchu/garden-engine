@@ -6,6 +6,7 @@ members = [
     "crates/games-module",
     "crates/admin-module",
     "crates/site-config",
+    "crates/site-settings",
     "crates/e2e",
 ]
 
