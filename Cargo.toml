@@ -4,6 +4,7 @@ members = [
     "crates/chess-module",
     "crates/music-module",
     "crates/games-module",
+    "crates/admin-module",
     "crates/site-config",
     "crates/e2e",
 ]
