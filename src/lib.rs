@@ -28,6 +28,7 @@ pub fn create_app(
     let lichess = app_state.integrations.lichess.clone();
     let spotify = app_state.integrations.spotify.clone();
     let steam = app_state.integrations.steam.clone();
+    let admin = app_state.admin.clone();
 
     App::new()
         .wrap(from_fn(i18n::locale_headers))
@@ -65,5 +66,10 @@ pub fn create_app(
         })
         .configure(controllers::tags_controller::configure_services)
         .configure(controllers::feed_controller::configure_services)
+        .configure(|cfg| {
+            if let Some(admin) = admin {
+                controllers::admin_controller::configure_services(cfg, admin)
+            }
+        })
         .service(controllers::fallback_controller::fallback_route) // This service should be last one in the list because it matches any string
 }

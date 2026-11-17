@@ -14,6 +14,7 @@ use std::sync::Arc;
 use crate::i18n::{LANG_PARAM, Locale, lang_query};
 use crate::site_config::{Features, Identity, SiteConfig};
 
+pub mod admin_controller;
 pub mod chess_controller;
 pub mod fallback_controller;
 pub mod feed_controller;
@@ -61,6 +62,7 @@ pub struct AppState {
     pub features: Features,
     pub shell: PageShell,
     pub integrations: Integrations,
+    pub admin: Option<web::Data<admin_controller::AdminAuth>>,
     pub post_search_engine: Arc<PostsSearchEngine>,
 }
 
@@ -83,7 +85,15 @@ impl AppState {
             features,
             shell: PageShell::from_template_dir(&shown),
             integrations: integrations.restricted_to(&features),
+            admin: None,
             post_search_engine,
+        }
+    }
+
+    pub fn with_admin(self, admin: admin_controller::AdminAuth) -> AppState {
+        AppState {
+            admin: Some(web::Data::new(admin)),
+            ..self
         }
     }
 }
