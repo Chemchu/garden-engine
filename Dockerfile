@@ -26,10 +26,12 @@ COPY --from=builder /usr/src/app/target/release/guslee ./guslee
 COPY --from=builder /usr/src/app/garden ./garden
 COPY --from=builder /usr/src/app/static ./static
 COPY --from=builder /usr/src/app/templates ./templates
+COPY --from=builder /usr/src/app/site.toml ./site.toml
 COPY --from=builder /usr/src/app/garden-dates.txt ./garden-dates.txt
 
 ENV TEMPLATE_PATH=/app/templates
 ENV GARDEN_DATES_FILE=/app/garden-dates.txt
+ENV SITE_CONFIG_PATH=/app/site.toml
 RUN chown -R app:app /app
 USER app
 EXPOSE 3000

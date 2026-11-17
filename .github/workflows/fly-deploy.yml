@@ -91,6 +91,7 @@ jobs:
           docker run --rm guslee:test test -d ./garden
           docker run --rm guslee:test test -d ./static
           docker run --rm guslee:test test -d ./templates
+          docker run --rm guslee:test test -f ./site.toml
           docker run --rm guslee:test test -s ./garden-dates.txt
       
       - name: Start container

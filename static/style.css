@@ -19,16 +19,16 @@
 }
 
 @utility prose-theme {
-  --tw-prose-body: #dbdfe5;
-  --tw-prose-headings: #dbdfe5;
-  --tw-prose-lead: #dbdfe5;
-  --tw-prose-links: #f58a07;
-  --tw-prose-bold: #dbdfe5;
-  --tw-prose-counters: #f58a07;
-  --tw-prose-bullets: #f58a07;
-  --tw-prose-hr: #f58a07;
-  --tw-prose-quotes: #dbdfe5;
-  --tw-prose-quote-borders: #f58a07;
+  --tw-prose-body: var(--color-bright-color);
+  --tw-prose-headings: var(--color-bright-color);
+  --tw-prose-lead: var(--color-bright-color);
+  --tw-prose-links: var(--color-primary-color);
+  --tw-prose-bold: var(--color-bright-color);
+  --tw-prose-counters: var(--color-primary-color);
+  --tw-prose-bullets: var(--color-primary-color);
+  --tw-prose-hr: var(--color-primary-color);
+  --tw-prose-quotes: var(--color-bright-color);
+  --tw-prose-quote-borders: var(--color-primary-color);
   --tw-prose-captions: #52796f;
   --tw-prose-code: #354f52;
   --tw-prose-pre-code: #cad2c5;
@@ -158,40 +158,25 @@ details.callout > summary {
 
 body {
   margin: 0; /* Remove default margin */
-  font-family: "Iosevka Regular", sans-serif;
-  font-weight: 600;
+  font-family: var(--font-body, sans-serif);
+  font-weight: var(--font-body-weight, 600);
 }
 
 h1,
 h2,
 h3,
 h4 {
-  font-family: "Tusker Grotesk", sans-serif;
+  font-family: var(--font-heading, sans-serif);
+  font-weight: var(--font-heading-weight, 600);
 }
 
 footer {
   flex-shrink: 0; /* Prevent footer from shrinking */
 }
 
-@font-face {
-  font-family: "Iosevka Regular";
-  src: url("Iosevka-Regular-subset.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Tusker Grotesk";
-  src: url("TuskerGrotesk-subset.woff2") format("woff2");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(219, 223, 229, 0.5) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-bright-color) 50%, transparent) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -205,16 +190,16 @@ footer {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(219, 223, 229, 0.5);
+  background: color-mix(in srgb, var(--color-bright-color) 50%, transparent);
   border-radius: 100vh;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #f58a07;
+  background: var(--color-primary-color);
 }
 
 details[open] summary::marker {
-  color: #f58a07;
+  color: var(--color-primary-color);
 }
 
 @media (width < 48rem) {

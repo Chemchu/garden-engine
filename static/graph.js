@@ -1,4 +1,3 @@
-const GRAPH_ROOT_COLOR = "#F58A07";
 const GRAPH_GOLDEN_FRACTION = 0.381966;
 const GRAPH_ROOT_HUES = { from: 15, to: 55 };
 const GRAPH_FIRST_FOLDER_HUE = 210;
@@ -41,7 +40,7 @@ function renderGraph(targetContainerId) {
     return slash > 0 ? d.file_path.slice(0, slash) : null;
   };
   const folderColor = (folder) =>
-    folder === null ? GRAPH_ROOT_COLOR : graphFolderColor(Math.max(folders.indexOf(folder), 0));
+    folder === null ? themeColor("primary") : graphFolderColor(Math.max(folders.indexOf(folder), 0));
   const colorOf = (d) => folderColor(parentFolder(d));
   const isCurrent = (d) => isLocalGraph && d.id === 1;
   const radiusOf = (d) => (isCurrent(d) ? 11 : 8);
@@ -131,8 +130,8 @@ function renderGraph(targetContainerId) {
     .selectAll("line")
     .data(links)
     .join("line")
-    .attr("stroke", "#999")
-    .attr("stroke-opacity", 0.6)
+    .attr("stroke", themeColor("bright"))
+    .attr("stroke-opacity", 0.35)
     .attr("stroke-width", 1);
 
   const node = g
@@ -142,7 +141,7 @@ function renderGraph(targetContainerId) {
     .join("circle")
     .attr("r", radiusOf)
     .attr("fill", colorOf)
-    .attr("stroke", (d) => (isCurrent(d) ? "#DBDFE5" : null))
+    .attr("stroke", (d) => (isCurrent(d) ? themeColor("bright") : null))
     .attr("stroke-width", (d) => (isCurrent(d) ? 2 : null))
     .style("cursor", "pointer")
     .call(drag(simulation))
@@ -159,7 +158,7 @@ function renderGraph(targetContainerId) {
     .attr("font-size", 12)
     .attr("dx", 12)
     .attr("dy", 4)
-    .style("fill", "#DBDFE5")
+    .style("fill", themeColor("bright"))
     .style("pointer-events", "none")
     .style("user-select", "none");
 
@@ -172,8 +171,8 @@ function renderGraph(targetContainerId) {
       .attr("r", (d) => (focused && d.id === focused.id ? radiusOf(d) + 2 : radiusOf(d)));
     label.style("opacity", (d) => (isNear(d) ? 1 : GRAPH_DIMMED));
     link
-      .attr("stroke", (l) => (touches(l) ? colorOf(focused) : "#999"))
-      .attr("stroke-opacity", (l) => (!focused ? 0.6 : touches(l) ? 1 : GRAPH_DIMMED));
+      .attr("stroke", (l) => (touches(l) ? colorOf(focused) : themeColor("bright")))
+      .attr("stroke-opacity", (l) => (!focused ? 0.35 : touches(l) ? 1 : GRAPH_DIMMED));
   }
 
   if (!isLocalGraph) {

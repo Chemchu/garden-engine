@@ -19,10 +19,22 @@ async fn rss_feed(app_state: web::Data<AppState>, req: HttpRequest) -> HttpRespo
 
     HttpResponse::Ok()
         .content_type("application/rss+xml; charset=utf-8")
-        .body(rss(&app_state.app_name, &base_url(&req), locale, &posts))
+        .body(rss(
+            app_state.shell.app_name(),
+            app_state.shell.description(locale),
+            &base_url(&req),
+            locale,
+            &posts,
+        ))
 }
 
-fn rss(app_name: &str, base_url: &str, locale: Locale, posts: &[Post]) -> String {
+fn rss(
+    app_name: &str,
+    description: &str,
+    base_url: &str,
+    locale: Locale,
+    posts: &[Post],
+) -> String {
     let lang = locale.as_str();
     let mut xml = format!(
         concat!(
@@ -37,7 +49,7 @@ fn rss(app_name: &str, base_url: &str, locale: Locale, posts: &[Post]) -> String
         ),
         title = escape_xml(app_name),
         base = escape_xml(base_url),
-        description = escape_xml(locale.texts().site_description),
+        description = escape_xml(description),
         lang = lang,
         feed_query = escape_xml(&lang_query(lang)),
     );
@@ -119,6 +131,7 @@ mod tests {
     fn feed_lists_posts_with_absolute_links() {
         let xml = rss(
             "Gus' garden",
+            Locale::En.texts().site_description,
             "https://g.dev",
             Locale::En,
             &[post(
@@ -148,6 +161,7 @@ mod tests {
     fn invalid_dates_leave_out_the_pub_date() {
         let xml = rss(
             "G",
+            Locale::En.texts().site_description,
             "https://g.dev",
             Locale::En,
             &[post("a.md", "A", "someday")],
@@ -167,6 +181,7 @@ mod tests {
 
         let xml = rss(
             "G",
+            Locale::Es.texts().site_description,
             "https://g.dev",
             Locale::Es,
             &[translated, untranslated],
