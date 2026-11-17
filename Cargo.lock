@@ -1861,7 +1861,6 @@ dependencies = [
 name = "games-module"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "futures",
  "reqwest 0.13.5",
  "serde",
