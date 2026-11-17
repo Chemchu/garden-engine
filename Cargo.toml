@@ -4,6 +4,7 @@ members = [
     "crates/chess-module",
     "crates/music-module",
     "crates/games-module",
+    "crates/site-config",
     "crates/e2e",
 ]
 
@@ -26,6 +27,7 @@ search-engine = { path = "crates/search-engine" }
 chess-module = { path = "crates/chess-module" }
 music-module = { path = "crates/music-module" }
 games-module = { path = "crates/games-module" }
+site-config = { path = "crates/site-config" }
 actix-files = "0.7.2"
 actix-web = "4.18.1"
 markdown = "1.0.0"

@@ -1,0 +1,23 @@
+[theme.colors]
+background = "#1e242c"
+bright = "#dbdfe5"
+primary = "#f58a07"
+secondary = "#3f826d"
+accent = "#bc6c25"
+shade = "#323c49"
+
+[theme.fonts.body]
+family = "Iosevka"
+fallback = "sans-serif"
+
+[[theme.fonts.body.faces]]
+src = "fonts/iosevka/Iosevka-Regular-subset.woff2"
+weight = 600
+
+[theme.fonts.heading]
+family = "Tusker Grotesk"
+fallback = "sans-serif"
+
+[[theme.fonts.heading.faces]]
+src = "fonts/tusker-grotesk/TuskerGrotesk-subset.woff2"
+weight = 600

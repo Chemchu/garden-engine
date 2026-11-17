@@ -4,9 +4,10 @@ use games_module::SteamState;
 use music_module::SpotifyState;
 use search_engine::{PostsSearchEngine, utils::DEFAULT_LANG};
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
-use crate::i18n::{LANG_PARAM, Locale, Texts, lang_query};
+use crate::i18n::{LANG_PARAM, Locale, lang_query};
+use crate::site_config::SiteConfig;
 
 pub mod chess_controller;
 pub mod fallback_controller;
@@ -21,15 +22,67 @@ pub mod routines_controller;
 pub mod steam_controller;
 pub mod tags_controller;
 
-static INDEX_TEMPLATES: OnceLock<HashMap<Locale, String>> = OnceLock::new();
-
 pub struct AppState {
-    pub app_name: String,
     pub garden_path: String,
+    pub shell: PageShell,
     pub lichess_state: LichessState,
     pub spotify_state: Arc<tokio::sync::Mutex<SpotifyState>>,
     pub steam_state: SteamState,
     pub post_search_engine: Arc<PostsSearchEngine>,
+}
+
+pub struct PageShell {
+    app_name: String,
+    templates: HashMap<Locale, String>,
+}
+
+impl PageShell {
+    pub fn new(app_name: &str, template: &str, site: &SiteConfig) -> PageShell {
+        let template = template.replace("{{THEME}}", &site.theme_style());
+
+        PageShell {
+            app_name: app_name.to_string(),
+            templates: Locale::ALL
+                .into_iter()
+                .map(|locale| (locale, localize_template(&template, locale)))
+                .collect(),
+        }
+    }
+
+    pub fn from_template_dir(app_name: &str, site: &SiteConfig) -> PageShell {
+        let template_path =
+            std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
+        let template = std::fs::read_to_string(format!("{template_path}/index.html"))
+            .expect("Failed to read index.html template");
+        PageShell::new(app_name, &template, site)
+    }
+
+    pub fn app_name(&self) -> &str {
+        &self.app_name
+    }
+
+    pub fn description(&self, locale: Locale) -> &str {
+        locale.texts().site_description
+    }
+
+    pub fn wrap(&self, content: &str, locale: Locale) -> String {
+        self.wrap_with_meta(content, &PageMeta::default(), None, locale)
+    }
+
+    pub fn wrap_with_meta(
+        &self,
+        content: &str,
+        meta: &PageMeta,
+        url: Option<&str>,
+        locale: Locale,
+    ) -> String {
+        self.templates[&locale]
+            .replace(
+                "{{HEAD}}",
+                &meta.head(&self.app_name, self.description(locale), url),
+            )
+            .replace("{{CONTENT}}", content)
+    }
 }
 
 #[derive(Default)]
@@ -56,11 +109,8 @@ impl PageMeta {
         }
     }
 
-    fn head(&self, app_name: &str, url: Option<&str>, texts: &Texts) -> String {
-        let description = self
-            .description
-            .as_deref()
-            .unwrap_or(texts.site_description);
+    fn head(&self, app_name: &str, site_description: &str, url: Option<&str>) -> String {
+        let description = self.description.as_deref().unwrap_or(site_description);
         let og_type = if self.is_article {
             "article"
         } else {
@@ -118,33 +168,6 @@ pub fn encode_path(path: &str) -> String {
     encoded
 }
 
-pub fn wrap_content_into_full_page(app_name: &str, content: &str, locale: Locale) -> String {
-    wrap_content_with_meta(app_name, content, &PageMeta::default(), None, locale)
-}
-
-pub fn wrap_content_with_meta(
-    app_name: &str,
-    content: &str,
-    meta: &PageMeta,
-    url: Option<&str>,
-    locale: Locale,
-) -> String {
-    let templates = INDEX_TEMPLATES.get_or_init(|| {
-        let template_path =
-            std::env::var("TEMPLATE_PATH").unwrap_or_else(|_| "./templates".to_string());
-        let template = std::fs::read_to_string(format!("{}/index.html", template_path))
-            .expect("Failed to read index.html template");
-        Locale::ALL
-            .into_iter()
-            .map(|locale| (locale, localize_template(&template, locale)))
-            .collect()
-    });
-
-    templates[&locale]
-        .replace("{{HEAD}}", &meta.head(app_name, url, locale.texts()))
-        .replace("{{CONTENT}}", content)
-}
-
 fn localize_template(template: &str, locale: Locale) -> String {
     locale
         .texts()
@@ -200,17 +223,15 @@ pub fn render_page_with_meta(
     meta: &PageMeta,
 ) -> Html {
     if is_partial_request(req) {
-        let title = maud::html! { title { (meta.full_title(&app_state.app_name)) } };
+        let title = maud::html! { title { (meta.full_title(app_state.shell.app_name())) } };
         Html::new(format!("{}{content}", title.into_string()))
     } else {
         let url = format!("{}{}", base_url(req), req.path());
-        Html::new(wrap_content_with_meta(
-            &app_state.app_name,
-            content,
-            meta,
-            Some(&url),
-            Locale::negotiate(req),
-        ))
+        Html::new(
+            app_state
+                .shell
+                .wrap_with_meta(content, meta, Some(&url), Locale::negotiate(req)),
+        )
     }
 }
 
@@ -231,7 +252,7 @@ pub fn render_not_found(app_state: &AppState, req: &HttpRequest) -> HttpResponse
     let body = if is_partial_request(req) {
         content
     } else {
-        wrap_content_into_full_page(&app_state.app_name, &content, locale)
+        app_state.shell.wrap(&content, locale)
     };
 
     HttpResponse::NotFound()
@@ -242,7 +263,16 @@ pub fn render_not_found(app_state: &AppState, req: &HttpRequest) -> HttpResponse
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::site_config::{DEFAULT_SITE_CONFIG_PATH, STATIC_DIR};
     use actix_web::test::TestRequest;
+
+    fn site() -> SiteConfig {
+        SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).unwrap()
+    }
+
+    fn shell(app_name: &str) -> PageShell {
+        PageShell::from_template_dir(app_name, &site())
+    }
 
     #[test]
     fn plain_browser_requests_need_the_full_page() {
@@ -284,8 +314,7 @@ mod tests {
 
     #[test]
     fn content_is_wrapped_into_the_index_template() {
-        let page =
-            wrap_content_into_full_page("Test garden", "<p id=\"marker\">hi</p>", Locale::En);
+        let page = shell("Test garden").wrap("<p id=\"marker\">hi</p>", Locale::En);
 
         assert!(page.starts_with("<!doctype html>"));
         assert!(page.contains("<title>Test garden</title>"));
@@ -300,6 +329,17 @@ mod tests {
     }
 
     #[test]
+    fn pages_apply_the_site_theme_after_the_compiled_css() {
+        let page = shell("Garden").wrap("", Locale::En);
+
+        let theme = site().theme_style();
+        assert!(!page.contains("{{THEME}}"));
+        assert!(page.contains(&theme));
+        assert!(page.find("compiled.css").unwrap() < page.find(&theme).unwrap());
+        assert!(page.contains(r#"<script src="/_static/theme.js"></script>"#));
+    }
+
+    #[test]
     fn page_meta_fills_titles_descriptions_and_links() {
         let meta = PageMeta {
             title: Some("Fog <notes>".to_string()),
@@ -308,13 +348,8 @@ mod tests {
             ..PageMeta::default()
         };
 
-        let page = wrap_content_with_meta(
-            "Garden",
-            "",
-            &meta,
-            Some("https://g.dev/posts/fog"),
-            Locale::En,
-        );
+        let page =
+            shell("Garden").wrap_with_meta("", &meta, Some("https://g.dev/posts/fog"), Locale::En);
 
         assert!(page.contains("<title>Fog &lt;notes&gt; · Garden</title>"));
         assert!(page.contains(r#"<meta property="og:title" content="Fog &lt;notes&gt;">"#));
@@ -332,13 +367,8 @@ mod tests {
             ..PageMeta::titled("Niebla")
         };
 
-        let page = wrap_content_with_meta(
-            "Garden",
-            "",
-            &meta,
-            Some("https://g.dev/posts/fog"),
-            Locale::En,
-        );
+        let page =
+            shell("Garden").wrap_with_meta("", &meta, Some("https://g.dev/posts/fog"), Locale::En);
 
         assert!(page.contains(r#"<link rel="canonical" href="https://g.dev/posts/fog?lang=es">"#));
         assert!(
@@ -364,13 +394,8 @@ mod tests {
             ..PageMeta::titled("Fog")
         };
 
-        let page = wrap_content_with_meta(
-            "Garden",
-            "",
-            &meta,
-            Some("https://g.dev/posts/fog"),
-            Locale::En,
-        );
+        let page =
+            shell("Garden").wrap_with_meta("", &meta, Some("https://g.dev/posts/fog"), Locale::En);
 
         assert!(page.contains(r#"<link rel="canonical" href="https://g.dev/posts/fog">"#));
         assert!(!page.contains(r#"rel="alternate" hreflang"#));
@@ -378,20 +403,18 @@ mod tests {
     }
 
     #[test]
-    fn every_template_text_exists_in_every_language() {
-        let template = std::fs::read_to_string("templates/index.html").unwrap();
-
+    fn every_template_placeholder_is_filled_in_every_language() {
+        let shell = shell("Garden");
         for locale in Locale::ALL {
-            let html = localize_template(&template, locale);
-            assert!(!html.contains("{{t:"), "{}", locale.as_str());
-            assert!(!html.contains("{{LANG"), "{}", locale.as_str());
+            let html = shell.wrap("", locale);
+            assert!(!html.contains("{{"), "{}", locale.as_str());
             assert!(html.contains(&format!(r#"<html lang="{}">"#, locale.as_str())));
         }
     }
 
     #[test]
     fn spanish_pages_use_spanish_texts() {
-        let page = wrap_content_into_full_page("Garden", "", Locale::Es);
+        let page = shell("Garden").wrap("", Locale::Es);
 
         assert!(page.contains(r#"<html lang="es">"#));
         assert!(page.contains("INICIO"));

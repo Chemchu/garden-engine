@@ -20,7 +20,7 @@ use std::path::{Component, Path};
 use crate::controllers::obsidian_markdown::{render_callouts, render_highlights};
 use crate::controllers::{
     AppState, PageMeta, base_url, is_partial_request, render_not_found, render_page_with_meta,
-    tags_controller::tag_url, wrap_content_into_full_page, wrap_content_with_meta,
+    tags_controller::tag_url,
 };
 use crate::i18n::{Locale, Texts};
 
@@ -38,8 +38,7 @@ async fn landing(app_state: web::Data<AppState>, req: HttpRequest, locale: Local
         log::error!("Failed to read welcome.md");
         return HttpResponse::Ok()
             .content_type("text/html; charset=utf-8")
-            .body(wrap_content_into_full_page(
-                &app_state.app_name,
+            .body(app_state.shell.wrap(
                 &html! { p { (locale.texts().welcome_error) } }.into_string(),
                 locale,
             ));
@@ -50,20 +49,21 @@ async fn landing(app_state: web::Data<AppState>, req: HttpRequest, locale: Local
         ..post.meta
     };
     let url = format!("{}/", base_url(&req));
-    Html::new(wrap_content_with_meta(
-        &app_state.app_name,
-        post_page_shell(
-            post.md,
-            "welcome".to_string(),
-            &post.lang,
-            &Garden::of(&app_state, locale),
-        )
-        .into_string()
-        .as_str(),
-        &meta,
-        Some(&url),
-        locale,
-    ))
+    Html::new(
+        app_state.shell.wrap_with_meta(
+            post_page_shell(
+                post.md,
+                "welcome".to_string(),
+                &post.lang,
+                &Garden::of(&app_state, locale),
+            )
+            .into_string()
+            .as_str(),
+            &meta,
+            Some(&url),
+            locale,
+        ),
+    )
     .customize()
     .insert_header((CONTENT_LANGUAGE, post.lang))
     .respond_to(&req)

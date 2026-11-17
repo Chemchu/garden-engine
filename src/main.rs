@@ -1,7 +1,11 @@
 use std::sync::Arc;
 
 use actix_web::{HttpServer, web};
-use guslee::{controllers::AppState, create_app, helpers};
+use guslee::{
+    controllers::{AppState, PageShell},
+    create_app, helpers,
+    site_config::SiteConfig,
+};
 use log::info;
 use search_engine::PostsSearchEngine;
 
@@ -21,6 +25,9 @@ async fn main() -> std::io::Result<()> {
     info!("Loading environment variables...");
     let env_vars = helpers::read_env_file();
     let env_var = |name: &str| env_vars[name].clone();
+
+    info!("Loading site configuration...");
+    let site = SiteConfig::from_env();
 
     info!("Initializing Lichess, Spotify and Steam state...");
     let lichess_state =
@@ -43,8 +50,8 @@ async fn main() -> std::io::Result<()> {
     info!("Search engine created correctly");
 
     let app_state = web::Data::new(AppState {
-        app_name: String::from("Gus' digital garden"),
         garden_path: GARDEN_PATH.to_string(),
+        shell: PageShell::from_template_dir("Gus' digital garden", &site),
         lichess_state,
         spotify_state,
         steam_state,

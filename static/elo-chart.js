@@ -66,7 +66,7 @@ function initChessChart(chartData) {
     .attr("x2", width)
     .attr("y1", (d) => y(d))
     .attr("y2", (d) => y(d))
-    .attr("stroke", "#374151")
+    .attr("stroke", themeColor("shade"))
     .attr("stroke-width", 1)
     .attr("stroke-dasharray", "2,2");
 
@@ -75,7 +75,8 @@ function initChessChart(chartData) {
     .append("g")
     .attr("transform", `translate(0,${height})`)
     .call(d3.axisBottom(x).ticks(narrow ? 3 : 6))
-    .attr("color", "#9ca3af")
+    .attr("color", themeColor("bright"))
+    .attr("opacity", 0.7)
     .selectAll("text")
     .style("font-size", "12px");
 
@@ -83,7 +84,8 @@ function initChessChart(chartData) {
   svg
     .append("g")
     .call(narrow ? d3.axisLeft(y).ticks(5, "d") : d3.axisLeft(y).ticks(8))
-    .attr("color", "#9ca3af")
+    .attr("color", themeColor("bright"))
+    .attr("opacity", 0.7)
     .selectAll("text")
     .style("font-size", "12px");
 
@@ -91,7 +93,7 @@ function initChessChart(chartData) {
     .append("path")
     .datum(data)
     .attr("fill", "none")
-    .attr("stroke", "#bc6c25")
+    .attr("stroke", themeColor("accent"))
     .attr("stroke-width", narrow ? 2 : 3)
     .attr("d", line);
 
@@ -104,8 +106,8 @@ function initChessChart(chartData) {
     .attr("cx", (d) => x(d.date))
     .attr("cy", (d) => y(d.rating))
     .attr("r", 3)
-    .attr("fill", "#F58A07")
-    .attr("stroke", "#F58A07")
+    .attr("fill", themeColor("primary"))
+    .attr("stroke", themeColor("primary"))
     .attr("stroke-width", 2)
     .style("cursor", "pointer")
     .on("mouseover", function (_event, d) {
@@ -130,15 +132,15 @@ function initChessChart(chartData) {
         .attr("y", -tipHeight + 15)
         .attr("width", tipWidth)
         .attr("height", tipHeight)
-        .attr("fill", "#1f2937")
-        .attr("stroke", "#F58A07")
+        .attr("fill", themeColor("background"))
+        .attr("stroke", themeColor("primary"))
         .attr("rx", 4);
 
       tooltip
         .append("text")
         .attr("text-anchor", "middle")
         .attr("y", narrow ? 6 : 2.5)
-        .attr("fill", "#fff")
+        .attr("fill", themeColor("bright"))
         .style("font-size", narrow ? "16px" : "24px")
         .text(d.rating);
     })

@@ -2,7 +2,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 use actix_web::{HttpServer, web};
-use guslee::controllers::AppState;
+use guslee::controllers::{AppState, PageShell};
+use guslee::site_config::{DEFAULT_SITE_CONFIG_PATH, STATIC_DIR, SiteConfig};
 use search_engine::PostsSearchEngine;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use wiremock::MockServer;
@@ -70,9 +71,11 @@ impl TestApp {
         let search_engine =
             PostsSearchEngine::new_with_endpoint("mem://", REPO_SOURCE, garden_path).await;
 
+        let site = SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).expect("valid site.toml");
+
         let app_state = web::Data::new(AppState {
-            app_name: APP_NAME.to_string(),
             garden_path: garden_path.to_string(),
+            shell: PageShell::from_template_dir(APP_NAME, &site),
             lichess_state: chess_module::LichessState::new(
                 LICHESS_TOKEN.to_string(),
                 LICHESS_USERNAME.to_string(),
