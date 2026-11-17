@@ -1,3 +1,19 @@
+[site]
+name = "Gus' digital garden"
+source_url = "https://github.com/Chemchu/guslee"
+
+[site.description]
+en = "My personal digital garden, built with Rust + HTMX"
+es = "Mi jardín digital personal, hecho con Rust + HTMX"
+
+[[site.links]]
+label = "GITHUB"
+url = "https://www.github.com/Chemchu"
+
+[[site.links]]
+label = "LINKEDIN"
+url = "https://www.linkedin.com/in/gustavo-lee"
+
 [theme.colors]
 background = "#1e242c"
 bright = "#dbdfe5"

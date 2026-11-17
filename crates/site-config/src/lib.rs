@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     fmt,
     path::{Path, PathBuf},
 };
@@ -10,13 +11,108 @@ pub const STATIC_DIR: &str = "./static";
 const STATIC_URL_PREFIX: &str = "/_static";
 const FONTS_DIR: &str = "fonts";
 const MAX_FAMILY_LEN: usize = 64;
+const DEFAULT_SITE_NAME: &str = "My digital garden";
+const MAX_NAME_LEN: usize = 80;
+const MAX_DESCRIPTION_LEN: usize = 300;
+const MAX_LABEL_LEN: usize = 30;
+const MAX_URL_LEN: usize = 300;
+pub const MAX_LINKS: usize = 8;
+const URL_SCHEMES: [&str; 3] = ["https://", "http://", "mailto:"];
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SiteConfig {
+    #[serde(rename = "site", default)]
+    pub identity: Identity,
     pub theme: Theme,
     #[serde(default)]
     pub features: Features,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Identity {
+    #[serde(default = "default_site_name")]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_url: Option<String>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub description: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub links: Vec<Link>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Link {
+    pub label: String,
+    pub url: String,
+}
+
+fn default_site_name() -> String {
+    DEFAULT_SITE_NAME.to_string()
+}
+
+impl Default for Identity {
+    fn default() -> Self {
+        Identity {
+            name: default_site_name(),
+            source_url: None,
+            description: BTreeMap::new(),
+            links: Vec::new(),
+        }
+    }
+}
+
+impl Identity {
+    pub fn validate(&self) -> Vec<String> {
+        let mut problems = Vec::new();
+
+        if !is_plain_text(&self.name, MAX_NAME_LEN) {
+            problems.push(format!(
+                "site.name must be 1-{MAX_NAME_LEN} characters of plain text, got {:?}",
+                self.name
+            ));
+        }
+        if let Some(url) = &self.source_url
+            && !is_link_url(url)
+        {
+            problems.push(format!(
+                "site.source_url must be an http(s) URL without spaces or quotes, got {url:?}"
+            ));
+        }
+        for (lang, text) in &self.description {
+            if !is_language_code(lang) {
+                problems.push(format!(
+                    "site.description keys must be language codes like \"en\", got {lang:?}"
+                ));
+            }
+            if !is_plain_text(text, MAX_DESCRIPTION_LEN) {
+                problems.push(format!(
+                    "site.description.{lang} must be 1-{MAX_DESCRIPTION_LEN} characters of plain text"
+                ));
+            }
+        }
+        if self.links.len() > MAX_LINKS {
+            problems.push(format!("site.links can have at most {MAX_LINKS} links"));
+        }
+        for (index, link) in self.links.iter().enumerate() {
+            if !is_plain_text(&link.label, MAX_LABEL_LEN) {
+                problems.push(format!(
+                    "site.links[{index}].label must be 1-{MAX_LABEL_LEN} characters of plain text, got {:?}",
+                    link.label
+                ));
+            }
+            if !is_link_url(&link.url) {
+                problems.push(format!(
+                    "site.links[{index}].url must be an http(s) or mailto URL without spaces or quotes, got {:?}",
+                    link.url
+                ));
+            }
+        }
+
+        problems
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -238,7 +334,7 @@ impl SiteConfig {
     }
 
     pub fn validate(&self) -> Vec<String> {
-        let mut problems = Vec::new();
+        let mut problems = self.identity.validate();
 
         for (name, value) in self.theme.colors.entries() {
             if !is_hex_color(value) {
@@ -331,6 +427,28 @@ impl SiteConfig {
 
         format!("<style id=\"site-theme\">{css}</style>")
     }
+}
+
+fn is_plain_text(value: &str, max_chars: usize) -> bool {
+    let count = value.chars().count();
+    !value.trim().is_empty()
+        && count <= max_chars
+        && !value.chars().any(char::is_control)
+        && !value.contains("{{")
+}
+
+fn is_link_url(value: &str) -> bool {
+    URL_SCHEMES
+        .iter()
+        .any(|scheme| value.len() > scheme.len() && value.starts_with(scheme))
+        && value.len() <= MAX_URL_LEN
+        && !value.chars().any(|c| {
+            c.is_whitespace() || c.is_control() || matches!(c, '"' | '\'' | '<' | '>' | '`')
+        })
+}
+
+fn is_language_code(value: &str) -> bool {
+    (2..=5).contains(&value.len()) && value.chars().all(|c| c.is_ascii_lowercase() || c == '-')
 }
 
 pub fn is_hex_color(value: &str) -> bool {
@@ -494,6 +612,74 @@ src = "fonts/tusker-grotesk/regular.woff2"
 
         font.faces.clear();
         assert_eq!(font.main_weight(), 400);
+    }
+
+    #[test]
+    fn the_site_identity_is_optional() {
+        let identity = valid().identity;
+
+        assert_eq!(identity, Identity::default());
+        assert_eq!(identity.name, "My digital garden");
+        assert!(identity.validate().is_empty());
+    }
+
+    #[test]
+    fn the_site_identity_is_read_from_the_site_table() {
+        let raw = format!(
+            "[site]\nname = \"Ana's garden\"\nsource_url = \"https://github.com/ana/garden\"\n\n[site.description]\nen = \"Notes\"\nes = \"Notas\"\n\n[[site.links]]\nlabel = \"MAIL\"\nurl = \"mailto:ana@example.com\"\n{VALID}"
+        );
+        let identity = SiteConfig::parse(&raw).unwrap().identity;
+
+        assert_eq!(identity.name, "Ana's garden");
+        assert_eq!(
+            identity.source_url.as_deref(),
+            Some("https://github.com/ana/garden")
+        );
+        assert_eq!(identity.description["es"], "Notas");
+        assert_eq!(identity.links[0].url, "mailto:ana@example.com");
+    }
+
+    #[test]
+    fn identity_values_are_checked() {
+        let link = |label: &str, url: &str| Link {
+            label: label.to_string(),
+            url: url.to_string(),
+        };
+        let bad = Identity {
+            name: " ".to_string(),
+            source_url: Some("javascript:alert(1)".to_string()),
+            description: BTreeMap::from([
+                ("EN".to_string(), "fine".to_string()),
+                ("es".to_string(), "line\nbreak".to_string()),
+            ]),
+            links: vec![
+                link("{{CONTENT}}", "https://github.com/a\"onmouseover=x"),
+                link("", "https://ok.example"),
+                link("FINE", "https://"),
+            ],
+        };
+
+        let problems = bad.validate();
+        assert_eq!(problems.len(), 8, "{problems:#?}");
+        assert!(problems[0].starts_with("site.name"));
+        assert!(problems[1].starts_with("site.source_url"));
+
+        let too_many = Identity {
+            links: vec![link("A", "https://a.example"); MAX_LINKS + 1],
+            ..Identity::default()
+        };
+        assert_eq!(
+            too_many.validate(),
+            vec!["site.links can have at most 8 links"]
+        );
+
+        let good = Identity {
+            name: "Ñandú's jardín".to_string(),
+            source_url: Some("http://localhost:3000/x?y=1#z".to_string()),
+            description: BTreeMap::from([("pt-br".to_string(), "Olá".to_string())]),
+            links: vec![link("MAIL", "mailto:me@example.com")],
+        };
+        assert!(good.validate().is_empty());
     }
 
     #[test]
