@@ -21,3 +21,10 @@ fallback = "sans-serif"
 [[theme.fonts.heading.faces]]
 src = "fonts/tusker-grotesk/TuskerGrotesk-subset.woff2"
 weight = 600
+
+[features]
+news = true
+chess = true
+music = true
+games = true
+schedule = true

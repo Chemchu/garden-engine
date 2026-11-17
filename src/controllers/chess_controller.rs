@@ -4,7 +4,7 @@ use actix_web::{
 };
 use cached::cached;
 use chess_module::{
-    ChessModule,
+    ChessModule, LichessState,
     types::{Game, GameRatingHistory, LichessUser, PerfStat, Perfs, Winner},
 };
 use maud::{PreEscaped, html};
@@ -14,19 +14,21 @@ use std::collections::HashMap;
 use crate::controllers::{AppState, render_page};
 use crate::i18n::{Locale, Texts, fill};
 
-pub fn configure_services(cfg: &mut web::ServiceConfig) {
-    cfg.service(chess_stats_by_game)
+pub fn configure_services(cfg: &mut web::ServiceConfig, lichess: web::Data<LichessState>) {
+    cfg.app_data(lichess)
+        .service(chess_stats_by_game)
         .service(chess_games_analysis);
 }
 
 #[get("/chess/stats/{game_mode}")]
 async fn chess_stats_by_game(
     app_state: web::Data<AppState>,
+    lichess: web::Data<LichessState>,
     path: web::Path<String>,
     req: HttpRequest,
     locale: Locale,
 ) -> Html {
-    let content = chess_stats_content(app_state.clone(), path.into_inner(), locale)
+    let content = chess_stats_content(lichess, path.into_inner(), locale)
         .await
         .unwrap_or_else(|fallback| fallback);
 
@@ -34,9 +36,9 @@ async fn chess_stats_by_game(
 }
 
 #[get("/chess/games/analysis")]
-async fn chess_games_analysis(app_state: web::Data<AppState>, locale: Locale) -> Html {
+async fn chess_games_analysis(lichess: web::Data<LichessState>, locale: Locale) -> Html {
     Html::new(
-        chess_games_analysis_content(app_state, locale)
+        chess_games_analysis_content(lichess, locale)
             .await
             .unwrap_or_else(|fallback| fallback),
     )
@@ -48,16 +50,17 @@ async fn chess_games_analysis(app_state: web::Data<AppState>, locale: Locale) ->
     convert = r#"{ format!("chess-{}-{}", locale.as_str(), game_mode) }"#
 )]
 async fn chess_stats_content(
-    app_state: web::Data<AppState>,
+    lichess: web::Data<LichessState>,
     game_mode: String,
     locale: Locale,
 ) -> Result<String, String> {
-    let (player_stats, rating_history) = ChessModule::get_player_data(&app_state.lichess_state)
-        .await
-        .map_err(|err| {
-            log::error!("Error fetching chess data: {}", err);
-            chess_fallback_html(locale.texts())
-        })?;
+    let (player_stats, rating_history) =
+        ChessModule::get_player_data(&lichess)
+            .await
+            .map_err(|err| {
+                log::error!("Error fetching chess data: {}", err);
+                chess_fallback_html(locale.texts())
+            })?;
 
     Ok(render_chess_page(game_mode, rating_history, player_stats, locale.texts()).into_string())
 }
@@ -68,22 +71,17 @@ async fn chess_stats_content(
     convert = r#"{ format!("chess-games-analysis-{}", locale.as_str()) }"#
 )]
 async fn chess_games_analysis_content(
-    app_state: web::Data<AppState>,
+    lichess: web::Data<LichessState>,
     locale: Locale,
 ) -> Result<String, String> {
-    let games = ChessModule::get_last_games_analysis(&app_state.lichess_state, 10)
+    let games = ChessModule::get_last_games_analysis(&lichess, 10)
         .await
         .map_err(|err| {
             log::error!("Error fetching chess games analysis: {}", err);
             chess_fallback_html(locale.texts())
         })?;
 
-    Ok(render_analysis_page(
-        games,
-        &app_state.lichess_state.lichess_username,
-        locale.texts(),
-    )
-    .into_string())
+    Ok(render_analysis_page(games, &lichess.lichess_username, locale.texts()).into_string())
 }
 
 fn chess_fallback_html(t: &Texts) -> String {

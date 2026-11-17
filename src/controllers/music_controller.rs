@@ -6,11 +6,12 @@ use cached::cached;
 use maud::{PreEscaped, html};
 use music_module::{SpotifyUser, TopArtistsResponse, TopTracksResponse};
 
-use crate::controllers::{AppState, render_page};
+use crate::controllers::{AppState, SharedSpotifyState, render_page};
 use crate::i18n::{Locale, Texts, fill};
 
-pub fn configure_services(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_user_profile)
+pub fn configure_services(cfg: &mut web::ServiceConfig, spotify: web::Data<SharedSpotifyState>) {
+    cfg.app_data(spotify)
+        .service(get_user_profile)
         .service(get_user_top_item)
         .service(cycle_time_range);
 }
@@ -18,11 +19,12 @@ pub fn configure_services(cfg: &mut web::ServiceConfig) {
 #[get("/music/profile")]
 async fn get_user_profile(
     app_state: web::Data<AppState>,
+    spotify: web::Data<SharedSpotifyState>,
     req: HttpRequest,
     locale: Locale,
 ) -> Html {
     let t = locale.texts();
-    let mut spotify_state = app_state.spotify_state.lock().await;
+    let mut spotify_state = spotify.lock().await;
     let user_profile = spotify_state.fetch_user_profile().await;
 
     let html_to_render = match user_profile.is_err() {
@@ -138,13 +140,13 @@ pub enum TopItems {
 
 #[get("/music/user-top/{item:.*}/{time_range:.*}")]
 async fn get_user_top_item(
-    app_state: web::Data<AppState>,
+    spotify: web::Data<SharedSpotifyState>,
     args: web::Path<(String, String)>,
     locale: Locale,
 ) -> Html {
     let (item, time_range) = args.into_inner();
     Html::new(
-        user_top_item_content(app_state, item, time_range, locale)
+        user_top_item_content(spotify, item, time_range, locale)
             .await
             .unwrap_or_else(|error_html| error_html),
     )
@@ -152,13 +154,13 @@ async fn get_user_top_item(
 
 #[get("/music/time-range/{type}/{term}/next")]
 async fn cycle_time_range(
-    app_state: web::Data<AppState>,
+    spotify: web::Data<SharedSpotifyState>,
     args: web::Path<(String, String)>,
     locale: Locale,
 ) -> Html {
     let (content_type, current_term) = args.into_inner();
     Html::new(
-        cycle_time_range_content(app_state, content_type, current_term, locale)
+        cycle_time_range_content(spotify, content_type, current_term, locale)
             .await
             .unwrap_or_else(|error_html| error_html),
     )
@@ -170,7 +172,7 @@ async fn cycle_time_range(
     convert = r#"{ format!("top_item-{}-time_range-{}-{}", item, time_range, locale.as_str()) }"#
 )]
 async fn user_top_item_content(
-    app_state: web::Data<AppState>,
+    spotify: web::Data<SharedSpotifyState>,
     item: String,
     time_range: String,
     locale: Locale,
@@ -185,7 +187,7 @@ async fn user_top_item_content(
         .into_string()
     };
 
-    let mut spotify_state = app_state.spotify_state.lock().await;
+    let mut spotify_state = spotify.lock().await;
     let top_items: Result<TopItems, _> = match item.as_str() {
         "artists" => spotify_state
             .fetch_top_items::<TopArtistsResponse>(&item, &time_range)
@@ -213,7 +215,7 @@ async fn user_top_item_content(
     convert = r#"{ format!("type-{}-term-{}-{}", content_type, current_term, locale.as_str()) }"#
 )]
 async fn cycle_time_range_content(
-    app_state: web::Data<AppState>,
+    spotify: web::Data<SharedSpotifyState>,
     content_type: String,
     current_term: String,
     locale: Locale,
@@ -221,7 +223,7 @@ async fn cycle_time_range_content(
     let t = locale.texts();
     let (next_term, label) = next_time_range(&current_term, t);
 
-    let mut spotify_state = app_state.spotify_state.lock().await;
+    let mut spotify_state = spotify.lock().await;
     let top_items_html = match content_type.as_str() {
         "artists" => spotify_state
             .fetch_top_items::<TopArtistsResponse>(&content_type, next_term)

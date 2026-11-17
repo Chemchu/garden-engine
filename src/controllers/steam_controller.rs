@@ -3,19 +3,24 @@ use actix_web::{
     web::{self, Html},
 };
 use cached::cached;
-use games_module::{RecentGame, SteamProfile, TopGame};
+use games_module::{RecentGame, SteamProfile, SteamState, TopGame};
 use maud::{PreEscaped, html};
 
 use crate::controllers::{AppState, render_page};
 use crate::i18n::{Locale, Texts, fill};
 
-pub fn configure_services(cfg: &mut web::ServiceConfig) {
-    cfg.service(steam_page);
+pub fn configure_services(cfg: &mut web::ServiceConfig, steam: web::Data<SteamState>) {
+    cfg.app_data(steam).service(steam_page);
 }
 
 #[get("/steam")]
-async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest, locale: Locale) -> Html {
-    let content = steam_page_content(app_state.clone(), locale)
+async fn steam_page(
+    app_state: web::Data<AppState>,
+    steam: web::Data<SteamState>,
+    req: HttpRequest,
+    locale: Locale,
+) -> Html {
+    let content = steam_page_content(steam, locale)
         .await
         .unwrap_or_else(|error_html| error_html);
 
@@ -28,13 +33,13 @@ async fn steam_page(app_state: web::Data<AppState>, req: HttpRequest, locale: Lo
     convert = r#"{ format!("steam-{}", locale.as_str()) }"#
 )]
 async fn steam_page_content(
-    app_state: web::Data<AppState>,
+    steam: web::Data<SteamState>,
     locale: Locale,
 ) -> Result<String, String> {
     let t = locale.texts();
-    let profile = app_state.steam_state.get_profile().await;
-    let recent_games = app_state.steam_state.get_recent_games(5).await;
-    let top_games = app_state.steam_state.get_top_played_games(5).await;
+    let profile = steam.get_profile().await;
+    let recent_games = steam.get_recent_games(5).await;
+    let top_games = steam.get_top_played_games(5).await;
 
     match (profile, recent_games, top_games) {
         (Ok(profile), Ok(recent_games), Ok(top_games)) => {

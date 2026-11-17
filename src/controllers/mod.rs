@@ -1,13 +1,18 @@
-use actix_web::{HttpRequest, HttpResponse, http::header::ContentType, web::Html};
+use actix_web::{
+    HttpRequest, HttpResponse,
+    http::header::ContentType,
+    web::{self, Html},
+};
 use chess_module::LichessState;
 use games_module::SteamState;
+use maud::PreEscaped;
 use music_module::SpotifyState;
 use search_engine::{PostsSearchEngine, utils::DEFAULT_LANG};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::i18n::{LANG_PARAM, Locale, lang_query};
-use crate::site_config::SiteConfig;
+use crate::site_config::{Features, SiteConfig};
 
 pub mod chess_controller;
 pub mod fallback_controller;
@@ -22,13 +27,66 @@ pub mod routines_controller;
 pub mod steam_controller;
 pub mod tags_controller;
 
+pub type SharedSpotifyState = tokio::sync::Mutex<SpotifyState>;
+
+#[derive(Default)]
+pub struct Integrations {
+    pub lichess: Option<web::Data<LichessState>>,
+    pub spotify: Option<web::Data<SharedSpotifyState>>,
+    pub steam: Option<web::Data<SteamState>>,
+}
+
+impl Integrations {
+    fn active_features(&self, configured: Features) -> Features {
+        Features {
+            chess: configured.chess && self.lichess.is_some(),
+            music: configured.music && self.spotify.is_some(),
+            games: configured.games && self.steam.is_some(),
+            ..configured
+        }
+    }
+
+    fn restricted_to(self, features: &Features) -> Integrations {
+        Integrations {
+            lichess: self.lichess.filter(|_| features.chess),
+            spotify: self.spotify.filter(|_| features.music),
+            steam: self.steam.filter(|_| features.games),
+        }
+    }
+}
+
 pub struct AppState {
     pub garden_path: String,
+    pub site: SiteConfig,
+    pub features: Features,
     pub shell: PageShell,
-    pub lichess_state: LichessState,
-    pub spotify_state: Arc<tokio::sync::Mutex<SpotifyState>>,
-    pub steam_state: SteamState,
+    pub integrations: Integrations,
     pub post_search_engine: Arc<PostsSearchEngine>,
+}
+
+impl AppState {
+    pub fn new(
+        app_name: &str,
+        garden_path: &str,
+        site: &SiteConfig,
+        post_search_engine: Arc<PostsSearchEngine>,
+        integrations: Integrations,
+    ) -> AppState {
+        let features = integrations.active_features(site.features);
+        let shown = SiteConfig {
+            features,
+            ..site.clone()
+        };
+
+        AppState {
+            garden_path: garden_path.to_string(),
+            site: site.clone(),
+            features,
+            shell: PageShell::from_template_dir(app_name, &shown),
+            integrations: integrations.restricted_to(&features),
+            post_search_engine,
+        }
+    }
 }
 
 pub struct PageShell {
@@ -38,7 +96,11 @@ pub struct PageShell {
 
 impl PageShell {
     pub fn new(app_name: &str, template: &str, site: &SiteConfig) -> PageShell {
-        let template = template.replace("{{THEME}}", &site.theme_style());
+        let template = template
+            .replace("{{THEME}}", &site.theme_style())
+            .replace("{{NAV_DESKTOP}}", &desktop_nav(&site.features))
+            .replace("{{NAV_MOBILE}}", &mobile_nav(&site.features))
+            .replace("{{SCHEDULE}}", &schedule_slot(&site.features));
 
         PageShell {
             app_name: app_name.to_string(),
@@ -83,6 +145,157 @@ impl PageShell {
             )
             .replace("{{CONTENT}}", content)
     }
+}
+
+struct NavLink {
+    desktop_id: &'static str,
+    mobile_id: &'static str,
+    href: &'static str,
+    text_key: &'static str,
+    loads_remote_data: bool,
+}
+
+impl NavLink {
+    fn render(&self, id: &str, class: &str) -> maud::Markup {
+        maud::html! {
+            a
+            id=(id)
+            class=(class)
+            href=(self.href)
+            hx-trigger="click"
+            hx-target="#main-section"
+            hx-swap=(if self.loads_remote_data { "innerHTML" } else { "innerHTML transition:true" })
+            hx-indicator=[self.loads_remote_data.then_some("#global-skeleton")]
+            { (PreEscaped(format!("{{{{t:{}}}}}", self.text_key))) }
+        }
+    }
+}
+
+fn nav_links(features: &Features) -> Vec<NavLink> {
+    let link = |desktop_id, mobile_id, href, text_key, loads_remote_data| NavLink {
+        desktop_id,
+        mobile_id,
+        href,
+        text_key,
+        loads_remote_data,
+    };
+
+    [
+        (
+            true,
+            link(
+                "home-section",
+                "home-section-mobile",
+                "/posts/welcome",
+                "nav_home",
+                false,
+            ),
+        ),
+        (
+            features.news,
+            link(
+                "news-section",
+                "news-section-mobile",
+                "/news",
+                "nav_news",
+                false,
+            ),
+        ),
+        (
+            true,
+            link(
+                "grader-view-section",
+                "garden-view-section-mobile",
+                "/garden-view-dispatcher",
+                "nav_garden",
+                false,
+            ),
+        ),
+        (
+            true,
+            link(
+                "tags-section",
+                "tags-section-mobile",
+                "/tags",
+                "nav_tags",
+                false,
+            ),
+        ),
+        (
+            features.chess,
+            link(
+                "chess-link-desktop",
+                "chess-link-mobile",
+                "/chess/stats/blitz",
+                "nav_chess",
+                true,
+            ),
+        ),
+        (
+            features.music,
+            link(
+                "music-link-desktop",
+                "music-link-mobile",
+                "/music/profile",
+                "nav_music",
+                true,
+            ),
+        ),
+        (
+            features.games,
+            link(
+                "games-link-desktop",
+                "games-link-mobile",
+                "/steam",
+                "nav_games",
+                true,
+            ),
+        ),
+    ]
+    .into_iter()
+    .filter_map(|(enabled, link)| enabled.then_some(link))
+    .collect()
+}
+
+fn desktop_nav(features: &Features) -> String {
+    maud::html! {
+        div class="hidden md:flex gap-2 lg:gap-3" {
+            @for (index, link) in nav_links(features).iter().enumerate() {
+                @if index > 0 {
+                    span class="text-primary-color" { (PreEscaped("&#8226;")) }
+                }
+                (link.render(link.desktop_id, "cursor-pointer hover:text-primary-color whitespace-nowrap"))
+            }
+        }
+    }
+    .into_string()
+}
+
+fn mobile_nav(features: &Features) -> String {
+    maud::html! {
+        @for link in nav_links(features) {
+            (link.render(link.mobile_id, "cursor-pointer hover:text-primary-color whitespace-nowrap py-2"))
+        }
+    }
+    .into_string()
+}
+
+fn schedule_slot(features: &Features) -> String {
+    if !features.schedule {
+        return String::new();
+    }
+
+    maud::html! {
+        span
+        id="schedule-section"
+        hx-get="/schedule"
+        hx-trigger="load"
+        hx-target="#schedule-section"
+        hx-swap="innerHTML"
+        class="hidden md:block text-base lg:text-lg font-semibold truncate"
+        { (PreEscaped("{{t:schedule_loading}}")) }
+    }
+    .into_string()
 }
 
 #[derive(Default)]
@@ -270,9 +483,21 @@ mod tests {
         SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).unwrap()
     }
 
+    fn site_with(features: Features) -> SiteConfig {
+        SiteConfig { features, ..site() }
+    }
+
     fn shell(app_name: &str) -> PageShell {
         PageShell::from_template_dir(app_name, &site())
     }
+
+    const ALL_OFF: Features = Features {
+        news: false,
+        chess: false,
+        music: false,
+        games: false,
+        schedule: false,
+    };
 
     #[test]
     fn plain_browser_requests_need_the_full_page() {
@@ -404,12 +629,121 @@ mod tests {
 
     #[test]
     fn every_template_placeholder_is_filled_in_every_language() {
-        let shell = shell("Garden");
-        for locale in Locale::ALL {
-            let html = shell.wrap("", locale);
-            assert!(!html.contains("{{"), "{}", locale.as_str());
-            assert!(html.contains(&format!(r#"<html lang="{}">"#, locale.as_str())));
+        for features in [Features::default(), ALL_OFF] {
+            let shell = PageShell::from_template_dir("Garden", &site_with(features));
+            for locale in Locale::ALL {
+                let html = shell.wrap("", locale);
+                assert!(!html.contains("{{"), "{} {features:?}", locale.as_str());
+                assert!(html.contains(&format!(r#"<html lang="{}">"#, locale.as_str())));
+            }
         }
+    }
+
+    #[test]
+    fn the_navigation_lists_every_enabled_feature_on_desktop_and_mobile() {
+        let page = shell("Garden").wrap("", Locale::En);
+
+        for id in [
+            "home-section",
+            "news-section",
+            "grader-view-section",
+            "tags-section",
+            "chess-link-desktop",
+            "music-link-desktop",
+            "games-link-desktop",
+            "home-section-mobile",
+            "news-section-mobile",
+            "garden-view-section-mobile",
+            "tags-section-mobile",
+            "chess-link-mobile",
+            "music-link-mobile",
+            "games-link-mobile",
+            "schedule-section",
+        ] {
+            assert_eq!(page.matches(&format!(r#"id="{id}""#)).count(), 1, "{id}");
+        }
+        assert!(page.contains(">CHESS<"));
+        assert!(page.contains(r##"href="/chess/stats/blitz" hx-trigger="click" hx-target="#main-section" hx-swap="innerHTML" hx-indicator="#global-skeleton""##));
+        assert!(page.contains(r##"href="/news" hx-trigger="click" hx-target="#main-section" hx-swap="innerHTML transition:true">"##));
+        assert!(page.contains("Loading schedule"));
+    }
+
+    #[test]
+    fn disabled_features_leave_the_navigation() {
+        let features = Features {
+            chess: false,
+            schedule: false,
+            ..Features::default()
+        };
+        let page =
+            PageShell::from_template_dir("Garden", &site_with(features)).wrap("", Locale::En);
+
+        assert!(!page.contains("/chess/stats"));
+        assert!(!page.contains("chess-link"));
+        assert!(!page.contains("schedule-section"));
+        assert!(page.contains("music-link-desktop") && page.contains("music-link-mobile"));
+    }
+
+    #[test]
+    fn desktop_links_are_separated_by_bullets() {
+        let desktop = desktop_nav(&ALL_OFF);
+
+        assert_eq!(desktop.matches("<a ").count(), 3);
+        assert_eq!(desktop.matches("&#8226;").count(), 2);
+        assert!(!mobile_nav(&ALL_OFF).contains("&#8226;"));
+        assert_eq!(schedule_slot(&ALL_OFF), "");
+    }
+
+    #[test]
+    fn sections_without_their_integration_are_inactive() {
+        let only_steam = Integrations {
+            steam: Some(web::Data::new(SteamState::new(
+                "key".to_string(),
+                "id".to_string(),
+            ))),
+            ..Integrations::default()
+        };
+
+        assert_eq!(
+            only_steam.active_features(Features::default()),
+            Features {
+                chess: false,
+                music: false,
+                ..Features::default()
+            }
+        );
+        assert_eq!(only_steam.active_features(ALL_OFF), ALL_OFF);
+        assert_eq!(
+            Integrations::default().active_features(Features::default()),
+            Features {
+                chess: false,
+                music: false,
+                games: false,
+                ..Features::default()
+            }
+        );
+    }
+
+    #[test]
+    fn integrations_of_disabled_features_are_dropped() {
+        let integrations = Integrations {
+            lichess: Some(web::Data::new(LichessState::new(
+                "token".to_string(),
+                "user".to_string(),
+            ))),
+            spotify: None,
+            steam: Some(web::Data::new(SteamState::new(
+                "key".to_string(),
+                "id".to_string(),
+            ))),
+        }
+        .restricted_to(&Features {
+            chess: false,
+            ..Features::default()
+        });
+
+        assert!(integrations.lichess.is_none());
+        assert!(integrations.steam.is_some());
     }
 
     #[test]
