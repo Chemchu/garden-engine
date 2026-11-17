@@ -7,8 +7,10 @@ use sha2::Sha256;
 use surrealdb::Surreal;
 use surrealdb::engine::any::{Any, connect};
 
+pub mod fonts;
 pub mod throttle;
 
+pub use fonts::{CatalogFont, FontCatalog};
 pub use throttle::{Admission, LoginThrottle};
 
 pub const MIN_SECRET_KEY_BYTES: usize = 32;

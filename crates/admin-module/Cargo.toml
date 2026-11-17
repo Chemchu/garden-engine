@@ -5,12 +5,17 @@ edition = "2024"
 
 [dependencies]
 surrealdb.workspace = true
+site-config = { path = "../site-config" }
 tokio = { workspace = true, features = ["rt", "sync"] }
 argon2 = { version = "0.5.3", features = ["std"] }
 password-hash = { version = "0.5.0", features = ["getrandom"] }
 hmac = "0.12.1"
 sha2 = "0.10.9"
 hex = "0.4.3"
+reqwest.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+wiremock = "0.6.5"
+serde_json.workspace = true

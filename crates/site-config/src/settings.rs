@@ -7,6 +7,10 @@ pub const ISSUE_LABEL: &str = "site-settings";
 pub const REQUEST_FENCE: &str = "```toml site-settings";
 pub const MAX_ISSUE_URL_LEN: usize = 8000;
 const FENCE_END: &str = "```";
+pub const FONTSOURCE_API_URL: &str = "https://api.fontsource.org";
+pub const FONTSOURCE_CDN_URL: &str = "https://cdn.jsdelivr.net/fontsource/fonts";
+pub const OFFERED_FONT_TYPES: [&str; 2] = ["google", "other"];
+pub const HIDDEN_FONT_CATEGORIES: [&str; 2] = ["icons", "other"];
 const MAX_FONT_ID_LEN: usize = 64;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -137,6 +141,10 @@ pub fn is_fontsource_id(id: &str) -> bool {
         && id
             .chars()
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+}
+
+pub fn is_offered_font(kind: &str, category: &str) -> bool {
+    OFFERED_FONT_TYPES.contains(&kind) && !HIDDEN_FONT_CATEGORIES.contains(&category)
 }
 
 pub fn is_font_weight(weight: u16) -> bool {
@@ -347,6 +355,16 @@ mod tests {
         }
         assert!(is_font_weight(100) && is_font_weight(900));
         assert!(!is_font_weight(0) && !is_font_weight(950) && !is_font_weight(450));
+    }
+
+    #[test]
+    fn google_and_open_source_text_fonts_are_offered() {
+        assert!(is_offered_font("google", "sans-serif"));
+        assert!(is_offered_font("other", "monospace"));
+        assert!(is_offered_font("other", "display"));
+        assert!(!is_offered_font("google", "icons"));
+        assert!(!is_offered_font("other", "other"));
+        assert!(!is_offered_font("commercial", "serif"));
     }
 
     #[test]
