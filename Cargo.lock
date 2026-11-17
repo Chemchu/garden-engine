@@ -249,9 +249,14 @@ dependencies = [
  "hex",
  "hmac",
  "password-hash",
+ "reqwest 0.13.5",
+ "serde",
+ "serde_json",
  "sha2",
+ "site-config",
  "surrealdb",
  "tokio",
+ "wiremock",
 ]
 
 [[package]]
