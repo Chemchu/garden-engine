@@ -25,7 +25,6 @@ pub mod music_controller;
 pub mod news_controller;
 pub mod obsidian_markdown;
 pub mod posts_controller;
-pub mod routines_controller;
 pub mod steam_controller;
 pub mod tags_controller;
 
@@ -59,6 +58,7 @@ impl Integrations {
 
 pub struct AppState {
     pub garden_path: String,
+    pub assets_dir: Option<std::path::PathBuf>,
     pub site: SiteConfig,
     pub features: Features,
     pub shell: PageShell,
@@ -82,6 +82,7 @@ impl AppState {
 
         AppState {
             garden_path: garden_path.to_string(),
+            assets_dir: None,
             site: site.clone(),
             features,
             shell: PageShell::from_template_dir(&shown),
@@ -89,6 +90,10 @@ impl AppState {
             admin: None,
             post_search_engine,
         }
+    }
+
+    pub fn with_assets(self, assets_dir: Option<std::path::PathBuf>) -> AppState {
+        AppState { assets_dir, ..self }
     }
 
     pub fn with_admin(self, admin: admin_controller::AdminAuth) -> AppState {
@@ -111,7 +116,6 @@ impl PageShell {
             .replace("{{THEME}}", &site.theme_style())
             .replace("{{NAV_DESKTOP}}", &desktop_nav(&site.features))
             .replace("{{NAV_MOBILE}}", &mobile_nav(&site.features))
-            .replace("{{SCHEDULE}}", &schedule_slot(&site.features))
             .replace("{{FOOTER_LINKS}}", &footer_links(&site.identity));
 
         PageShell {
@@ -319,24 +323,6 @@ fn footer_links(identity: &Identity) -> String {
     .into_string()
 }
 
-fn schedule_slot(features: &Features) -> String {
-    if !features.schedule {
-        return String::new();
-    }
-
-    maud::html! {
-        span
-        id="schedule-section"
-        hx-get="/schedule"
-        hx-trigger="load"
-        hx-target="#schedule-section"
-        hx-swap="innerHTML"
-        class="hidden md:block text-base lg:text-lg font-semibold truncate"
-        { (PreEscaped("{{t:schedule_loading}}")) }
-    }
-    .into_string()
-}
-
 #[derive(Default)]
 pub struct PageMeta {
     pub title: Option<String>,
@@ -515,11 +501,13 @@ pub fn render_not_found(app_state: &AppState, req: &HttpRequest) -> HttpResponse
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::site_config::{DEFAULT_SITE_CONFIG_PATH, STATIC_DIR};
+    use crate::site_config::STATIC_DIR;
+
+    const SITE_CONFIG_PATH: &str = "crates/e2e/fixtures/site.toml";
     use actix_web::test::TestRequest;
 
     fn site() -> SiteConfig {
-        SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).unwrap()
+        SiteConfig::load(SITE_CONFIG_PATH, STATIC_DIR).unwrap()
     }
 
     fn site_with(features: Features) -> SiteConfig {
@@ -537,7 +525,6 @@ mod tests {
         chess: false,
         music: false,
         games: false,
-        schedule: false,
     };
 
     #[test]
@@ -699,14 +686,13 @@ mod tests {
             "chess-link-mobile",
             "music-link-mobile",
             "games-link-mobile",
-            "schedule-section",
         ] {
             assert_eq!(page.matches(&format!(r#"id="{id}""#)).count(), 1, "{id}");
         }
         assert!(page.contains(">CHESS<"));
         assert!(page.contains(r##"href="/chess/stats/blitz" hx-trigger="click" hx-target="#main-section" hx-swap="innerHTML" hx-indicator="#global-skeleton""##));
         assert!(page.contains(r##"href="/news" hx-trigger="click" hx-target="#main-section" hx-swap="innerHTML transition:true">"##));
-        assert!(page.contains("Loading schedule"));
+        assert!(!page.contains("{{SCHEDULE}}") && !page.contains("/schedule"));
     }
 
     #[test]
@@ -715,7 +701,7 @@ mod tests {
 
         assert!(page.contains(r#"href="https://www.github.com/Chemchu">GITHUB</a>"#));
         assert!(page.contains(r#"href="https://www.linkedin.com/in/gustavo-lee">LINKEDIN</a>"#));
-        assert!(page.contains(r#"href="https://github.com/Chemchu/guslee">"#));
+        assert!(page.contains(r#"href="https://github.com/Chemchu/garden-engine">"#));
         assert!(!page.contains("{{FOOTER_LINKS}}"));
     }
 
@@ -760,14 +746,12 @@ mod tests {
     fn disabled_features_leave_the_navigation() {
         let features = Features {
             chess: false,
-            schedule: false,
             ..Features::default()
         };
         let page = PageShell::from_template_dir(&site_with(features)).wrap("", Locale::En);
 
         assert!(!page.contains("/chess/stats"));
         assert!(!page.contains("chess-link"));
-        assert!(!page.contains("schedule-section"));
         assert!(page.contains("music-link-desktop") && page.contains("music-link-mobile"));
     }
 
@@ -778,7 +762,6 @@ mod tests {
         assert_eq!(desktop.matches("<a ").count(), 3);
         assert_eq!(desktop.matches("&#8226;").count(), 2);
         assert!(!mobile_nav(&ALL_OFF).contains("&#8226;"));
-        assert_eq!(schedule_slot(&ALL_OFF), "");
     }
 
     #[test]

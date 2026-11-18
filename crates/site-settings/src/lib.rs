@@ -394,9 +394,12 @@ fn summarize(
         out.push_str("\n\n");
     }
 
+    let folder = static_dir
+        .file_name()
+        .map_or_else(|| DEFAULT_STATIC_DIR.into(), |name| name.to_string_lossy());
     let shown = |path: &PathBuf| {
         let relative = path.strip_prefix(static_dir).unwrap_or(path);
-        format!("static/{}", relative.display())
+        format!("{folder}/{}", relative.display())
     };
     if !added.is_empty() || !removed.is_empty() {
         out.push_str("**Font files**\n\n");

@@ -1,12 +1,12 @@
-use e2e::{REAL_GARDEN_PATH, Response, TestApp};
+use e2e::{Response, STARTER_GARDEN_PATH, TestApp};
 
 fn post_routes() -> Vec<String> {
-    let mut routes: Vec<String> = walkdir::WalkDir::new(REAL_GARDEN_PATH)
+    let mut routes: Vec<String> = walkdir::WalkDir::new(STARTER_GARDEN_PATH)
         .into_iter()
         .map(|entry| entry.unwrap().into_path())
         .filter(|path| path.extension().is_some_and(|ext| ext == "md"))
         .map(|path| {
-            let relative = path.strip_prefix(REAL_GARDEN_PATH).unwrap();
+            let relative = path.strip_prefix(STARTER_GARDEN_PATH).unwrap();
             relative.with_extension("").to_string_lossy().into_owned()
         })
         .collect();
@@ -19,10 +19,10 @@ fn assert_ok(path: &str, response: &Response) {
 }
 
 #[tokio::test]
-async fn every_real_post_renders_every_page() {
-    let app = TestApp::spawn_with_garden(REAL_GARDEN_PATH).await;
+async fn every_starter_post_renders_every_page() {
+    let app = TestApp::spawn_with_garden(STARTER_GARDEN_PATH).await;
     let routes = post_routes();
-    assert!(!routes.is_empty(), "the real garden was not found");
+    assert!(!routes.is_empty(), "the starter garden was not found");
 
     for route in &routes {
         for path in [
@@ -39,8 +39,8 @@ async fn every_real_post_renders_every_page() {
 }
 
 #[tokio::test]
-async fn every_real_published_post_has_a_preview() {
-    let app = TestApp::spawn_with_garden(REAL_GARDEN_PATH).await;
+async fn every_starter_post_has_a_preview() {
+    let app = TestApp::spawn_with_garden(STARTER_GARDEN_PATH).await;
     let switcher: serde_json::Value =
         serde_json::from_str(&app.get("/switcher.json").await.body).unwrap();
 
@@ -51,8 +51,8 @@ async fn every_real_published_post_has_a_preview() {
 }
 
 #[tokio::test]
-async fn real_garden_listings_render() {
-    let app = TestApp::spawn_with_garden(REAL_GARDEN_PATH).await;
+async fn starter_listings_render() {
+    let app = TestApp::spawn_with_garden(STARTER_GARDEN_PATH).await;
 
     for path in [
         "/",
@@ -63,7 +63,7 @@ async fn real_garden_listings_render() {
         "/garden-view",
         "/search?limit=100&view=topics",
         "/search?limit=100&view=folders",
-        "/search?limit=100&query=ireland",
+        "/search?limit=100&query=links",
     ] {
         assert_ok(path, &app.htmx_get(path).await);
     }

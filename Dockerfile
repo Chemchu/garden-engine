@@ -7,10 +7,10 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder 
 COPY --from=planner /usr/src/app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json --bin guslee
+RUN cargo chef cook --release --recipe-path recipe.json --bin garden-engine --bin site-settings
 COPY . .
-RUN cargo build --release --bin guslee
-RUN cd garden && git log --format=%x00%cs --name-only --relative -- . > ../garden-dates.txt || true
+RUN cargo build --release --bin garden-engine --bin site-settings
+RUN cd starter/garden && git log --format=%x00%cs --name-only --relative -- . > ../../garden-dates.txt || true
 
 # Runtime image - same base as builder
 FROM debian:trixie-slim
@@ -22,17 +22,19 @@ RUN apt-get update && \
 RUN useradd -ms /bin/bash app
 WORKDIR /app
 
-COPY --from=builder /usr/src/app/target/release/guslee ./guslee
-COPY --from=builder /usr/src/app/garden ./garden
+COPY --from=builder /usr/src/app/target/release/garden-engine ./garden-engine
+COPY --from=builder /usr/src/app/target/release/site-settings ./site-settings
 COPY --from=builder /usr/src/app/static ./static
 COPY --from=builder /usr/src/app/templates ./templates
-COPY --from=builder /usr/src/app/site.toml ./site.toml
-COPY --from=builder /usr/src/app/garden-dates.txt ./garden-dates.txt
+COPY --from=builder /usr/src/app/starter/garden ./content/garden
+COPY --from=builder /usr/src/app/starter/site.toml ./content/site.toml
+COPY --from=builder /usr/src/app/starter/assets ./content/assets
+COPY --from=builder /usr/src/app/garden-dates.txt ./content/garden-dates.txt
 
 ENV TEMPLATE_PATH=/app/templates
-ENV GARDEN_DATES_FILE=/app/garden-dates.txt
-ENV SITE_CONFIG_PATH=/app/site.toml
+ENV CONTENT_DIR=/app/content
+ENV GARDEN_DATES_FILE=/app/content/garden-dates.txt
 RUN chown -R app:app /app
 USER app
 EXPOSE 3000
-CMD ["./guslee"]
+CMD ["./garden-engine"]

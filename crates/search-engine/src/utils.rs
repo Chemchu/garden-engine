@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use surrealdb::types::SurrealValue;
 
 pub const DEFAULT_LANG: &str = "en";
+pub const GARDEN_DIR: &str = "garden";
 
 pub struct TitleField;
 pub struct TagsField;
@@ -45,19 +46,24 @@ pub struct MdMetadata {
     pub last_updated: Option<String>,
 }
 
-pub fn extract_full_metadata(repo_source: &str, post_path: &str) -> Option<MdMetadata> {
+pub fn parse_frontmatter(content: &str) -> Result<PostMetadata, String> {
     use gray_matter::engine::YAML;
-    let matter = Matter::<YAML>::new();
-    let content = fs::read_to_string(post_path).ok()?;
+    Matter::<YAML>::new()
+        .parse::<PostMetadata>(content)
+        .map_err(|e| e.to_string())?
+        .data
+        .ok_or_else(|| "it has no front matter".to_string())
+}
 
-    let post_metadata = match matter.parse::<PostMetadata>(&content) {
-        Ok(result) => result.data,
-        Err(e) => {
-            eprintln!("Failed to parse frontmatter: {:?}", e);
-            eprintln!("Content: {}", content);
-            None
-        }
-    }?;
+pub fn extract_full_metadata(
+    repo_source: &str,
+    post_path: &str,
+    source_path: &str,
+) -> Option<MdMetadata> {
+    let content = fs::read_to_string(post_path).ok()?;
+    let post_metadata = parse_frontmatter(&content)
+        .inspect_err(|e| eprintln!("Failed to parse the front matter of {post_path}: {e}"))
+        .ok()?;
 
     Some(MdMetadata {
         title: post_metadata.title,
@@ -66,7 +72,7 @@ pub fn extract_full_metadata(repo_source: &str, post_path: &str) -> Option<MdMet
         tags: post_metadata.tags,
         date: post_metadata.date,
         is_draft: post_metadata.is_draft,
-        post_source_url: source_url(repo_source, post_path),
+        post_source_url: source_url(repo_source, &format!("{GARDEN_DIR}/{source_path}")),
         reading_time: calc_reading_time(post_path),
         last_updated: None,
     })
@@ -296,7 +302,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = write_post(dir.path(), "post.md", &format!("{FRONTMATTER}Body text"));
 
-        let metadata = extract_full_metadata("https://repo", &path).unwrap();
+        let metadata = extract_full_metadata("https://repo", &path, "post.md").unwrap();
 
         assert_eq!(metadata.title, "A title");
         assert_eq!(metadata.description, "A description");
@@ -305,6 +311,7 @@ mod tests {
         assert_eq!(metadata.tags, vec!["one", "two"]);
         assert!(!metadata.is_draft, "is_draft defaults to false");
         assert_eq!(metadata.reading_time, 1);
+        assert_eq!(metadata.post_source_url, "https://repo/garden/post.md");
     }
 
     #[test]
@@ -314,7 +321,7 @@ mod tests {
         let path = write_post(dir.path(), "draft.md", &content);
 
         assert!(
-            extract_full_metadata("https://repo", &path)
+            extract_full_metadata("https://repo", &path, "post.md")
                 .unwrap()
                 .is_draft
         );
@@ -330,8 +337,8 @@ mod tests {
             &FRONTMATTER.replace("title: \"A title\"\n", ""),
         );
 
-        assert!(extract_full_metadata("https://repo", &no_frontmatter).is_none());
-        assert!(extract_full_metadata("https://repo", &no_title).is_none());
-        assert!(extract_full_metadata("https://repo", "/missing.md").is_none());
+        assert!(extract_full_metadata("https://repo", &no_frontmatter, "post.md").is_none());
+        assert!(extract_full_metadata("https://repo", &no_title, "post.md").is_none());
+        assert!(extract_full_metadata("https://repo", "/missing.md", "post.md").is_none());
     }
 }

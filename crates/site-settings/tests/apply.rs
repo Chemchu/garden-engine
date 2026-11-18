@@ -279,6 +279,39 @@ async fn identity_changes_are_applied_and_summarized() {
 }
 
 #[tokio::test]
+async fn content_repos_see_their_own_assets_folder_in_the_summary() {
+    let repo = Repo::new();
+    let assets = repo.dir.path().join("assets");
+    std::fs::rename(repo.static_dir(), &assets).unwrap();
+    let (_server, fontsource) = fontsource().await;
+    let current = SiteConfig::load(repo.config_path(), &assets).unwrap();
+    let request = SettingsRequest {
+        fonts: FontRequests {
+            body: inter(600),
+            heading: FontRequest::keep(),
+        },
+        ..SettingsRequest::keeping(&current)
+    };
+
+    let outcome = apply(&request, &current, &assets, &fontsource, None)
+        .await
+        .unwrap();
+
+    assert!(assets.join("fonts/inter/latin-600-normal.woff2").is_file());
+    assert!(
+        outcome
+            .summary
+            .contains("- added `assets/fonts/inter/latin-600-normal.woff2`")
+    );
+    assert!(
+        outcome
+            .summary
+            .contains("- removed `assets/fonts/old-body/`")
+    );
+    assert!(!outcome.summary.contains("static/"));
+}
+
+#[tokio::test]
 async fn new_fonts_are_downloaded_and_unused_ones_removed() {
     let repo = Repo::new();
     let (_server, fontsource) = fontsource().await;

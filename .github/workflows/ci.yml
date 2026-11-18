@@ -1,4 +1,4 @@
-name: Build, Test, and Deploy
+name: CI
 on:
   push:
     branches: [ main ]
@@ -71,29 +71,42 @@ jobs:
           context: .
           push: false
           load: true
-          tags: guslee:test
+          tags: garden-engine:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
       - name: Check glibc version
-        run: docker run --rm guslee:test ldd --version
+        run: docker run --rm garden-engine:test ldd --version
       
       - name: Verify binary dependencies
         run: |
           echo "Checking binary dependencies..."
-          docker run --rm guslee:test ldd ./guslee
+          docker run --rm garden-engine:test ldd ./garden-engine
           echo "Verifying no missing dependencies..."
-          ! docker run --rm guslee:test ldd ./guslee | grep "not found"
+          ! docker run --rm garden-engine:test ldd ./garden-engine | grep "not found"
       
       - name: Verify files exist
         run: |
-          docker run --rm guslee:test ls -la /app
-          docker run --rm guslee:test test -f ./guslee
-          docker run --rm guslee:test test -d ./garden
-          docker run --rm guslee:test test -d ./static
-          docker run --rm guslee:test test -d ./templates
-          docker run --rm guslee:test test -f ./site.toml
-          docker run --rm guslee:test test -s ./garden-dates.txt
+          docker run --rm garden-engine:test ls -la /app
+          docker run --rm garden-engine:test test -x ./garden-engine
+          docker run --rm garden-engine:test test -x ./site-settings
+          docker run --rm garden-engine:test test -d ./static
+          docker run --rm garden-engine:test test -d ./templates
+          docker run --rm garden-engine:test test -d ./content/garden
+          docker run --rm garden-engine:test test -f ./content/site.toml
+          docker run --rm garden-engine:test test -d ./content/assets/fonts
+          docker run --rm garden-engine:test test -s ./content/garden-dates.txt
+
+      - name: Check the content
+        run: docker run --rm garden-engine:test ./garden-engine check
+
+      - name: Check the starter kit on this engine
+        run: |
+          sed '1s|^FROM .*|FROM garden-engine:test|' starter/Dockerfile > "$RUNNER_TEMP/starter.Dockerfile"
+          docker buildx build --builder default --load \
+            -f "$RUNNER_TEMP/starter.Dockerfile" -t starter:test starter
+          docker run --rm starter:test ./garden-engine check
+          docker run --rm starter:test test -f /app/site/assets/fonts/inter/latin-400-normal.woff2
       
       - name: Start container
         run: |
@@ -107,20 +120,20 @@ jobs:
             -e STEAM_API_KEY="test_steam_api_key" \
             -e STEAM_ID="test_steam_id" \
             -e REPO_SOURCE="test_repo_source" \
-            --name guslee-test guslee:test
+            --name garden-engine-test garden-engine:test
       
       - name: Check container is running
         run: |
           sleep 2
-          if [ "$(docker inspect -f '{{.State.Running}}' guslee-test)" == "true" ]; then
+          if [ "$(docker inspect -f '{{.State.Running}}' garden-engine-test)" == "true" ]; then
             echo "Container is running"
-            docker ps --filter "name=guslee-test"
+            docker ps --filter "name=garden-engine-test"
           else
             echo "Container failed to start"
             echo "Container status:"
-            docker ps -a --filter "name=guslee-test"
+            docker ps -a --filter "name=garden-engine-test"
             echo "Container logs:"
-            docker logs guslee-test
+            docker logs garden-engine-test
             exit 1
           fi
       
@@ -133,7 +146,7 @@ jobs:
             fi
             if [ $i -eq 30 ]; then
               echo "Application failed to respond"
-              docker logs guslee-test
+              docker logs garden-engine-test
               exit 1
             fi
             echo "Waiting for application... attempt $i"
@@ -142,28 +155,8 @@ jobs:
       
       - name: Show container logs
         if: always()
-        run: docker logs guslee-test
+        run: docker logs garden-engine-test
       
       - name: Stop container
         if: always()
-        run: docker stop guslee-test || true
-  deploy:
-    needs: [rust-test, docker-test]
-    runs-on: ubuntu-latest
-    # Only deploy on push to main (not on PRs)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      
-      - name: Setup Flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
-      
-      - name: Deploy to Fly.io
-        run: flyctl deploy --remote-only ${FLY_APP_NAME:+--app "$FLY_APP_NAME"}
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-          FLY_APP_NAME: ${{ vars.FLY_APP_NAME }}
+        run: docker stop garden-engine-test || true

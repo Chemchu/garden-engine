@@ -5,6 +5,8 @@
 @source "templates/**/*.{html,js}";
 @source "static/**/*.{html,js}";
 @source not "../.github";
+@source not "../docs";
+@source not "../starter";
 
 @theme {
   --color-bright-color: #dbdfe5;

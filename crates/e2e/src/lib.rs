@@ -3,9 +3,9 @@ use std::sync::{Arc, OnceLock};
 
 use actix_web::{HttpServer, web};
 use admin_module::{AdminCredentials, AdminStore, FontCatalog};
-use guslee::controllers::{AppState, Integrations, admin_controller::AdminAuth};
-use guslee::settings::GithubRepo;
-use guslee::site_config::{DEFAULT_SITE_CONFIG_PATH, Features, STATIC_DIR, SiteConfig};
+use garden_engine::controllers::{AppState, Integrations, admin_controller::AdminAuth};
+use garden_engine::settings::GithubRepo;
+use garden_engine::site_config::{Features, STATIC_DIR, SiteConfig};
 use search_engine::PostsSearchEngine;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use wiremock::MockServer;
@@ -24,7 +24,8 @@ pub const ADMIN_PASSWORD: &str = "a long and correct passphrase";
 pub const ADMIN_SECRET_KEY: &str = "e2e-secret-key-with-at-least-32-bytes";
 
 pub const GARDEN_PATH: &str = "crates/e2e/fixtures/garden";
-pub const REAL_GARDEN_PATH: &str = "garden";
+pub const SITE_CONFIG_PATH: &str = "crates/e2e/fixtures/site.toml";
+pub const STARTER_GARDEN_PATH: &str = "starter/garden";
 
 pub struct TestApp {
     pub address: String,
@@ -93,6 +94,18 @@ impl TestApp {
             Features::default(),
             Some(admin_credentials()),
             false,
+            None,
+        )
+        .await
+    }
+
+    pub async fn spawn_with_assets(assets_dir: &std::path::Path) -> TestApp {
+        TestApp::spawn_with_options(
+            GARDEN_PATH,
+            Features::default(),
+            None,
+            true,
+            Some(assets_dir.to_path_buf()),
         )
         .await
     }
@@ -102,7 +115,7 @@ impl TestApp {
         features: Features,
         admin: Option<AdminCredentials>,
     ) -> TestApp {
-        TestApp::spawn_with_options(garden_path, features, admin, true).await
+        TestApp::spawn_with_options(garden_path, features, admin, true, None).await
     }
 
     async fn spawn_with_options(
@@ -110,6 +123,7 @@ impl TestApp {
         features: Features,
         admin: Option<AdminCredentials>,
         with_integrations: bool,
+        assets_dir: Option<std::path::PathBuf>,
     ) -> TestApp {
         enter_workspace_root();
 
@@ -123,7 +137,7 @@ impl TestApp {
 
         let mut site = SiteConfig {
             features,
-            ..SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).expect("valid site.toml")
+            ..SiteConfig::load(SITE_CONFIG_PATH, STATIC_DIR).expect("valid site.toml")
         };
         site.identity.name = APP_NAME.to_string();
 
@@ -156,7 +170,8 @@ impl TestApp {
             Integrations::default()
         };
         let mut app_state =
-            AppState::new(garden_path, &site, Arc::new(search_engine), integrations);
+            AppState::new(garden_path, &site, Arc::new(search_engine), integrations)
+                .with_assets(assets_dir);
         if let Some(credentials) = admin {
             let store = AdminStore::new(credentials).await.expect("valid admin");
             let admin = AdminAuth::new(
@@ -169,7 +184,7 @@ impl TestApp {
         }
         let app_state = web::Data::new(app_state);
 
-        let server = HttpServer::new(move || guslee::create_app(app_state.clone()))
+        let server = HttpServer::new(move || garden_engine::create_app(app_state.clone()))
             .workers(1)
             .bind(("127.0.0.1", 0))
             .expect("bind random port");

@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 pub mod settings;
 
-pub const DEFAULT_SITE_CONFIG_PATH: &str = "./site.toml";
 pub const STATIC_DIR: &str = "./static";
 const STATIC_URL_PREFIX: &str = "/_static";
 const FONTS_DIR: &str = "fonts";
@@ -125,17 +124,15 @@ pub struct Features {
     pub chess: bool,
     pub music: bool,
     pub games: bool,
-    pub schedule: bool,
 }
 
 impl Features {
-    pub fn entries(&self) -> [(&'static str, bool); 5] {
+    pub fn entries(&self) -> [(&'static str, bool); 4] {
         [
             ("news", self.news),
             ("chess", self.chess),
             ("music", self.music),
             ("games", self.games),
-            ("schedule", self.schedule),
         ]
     }
 }
@@ -147,7 +144,6 @@ impl Default for Features {
             chess: true,
             music: true,
             games: true,
-            schedule: true,
         }
     }
 }
@@ -302,20 +298,20 @@ impl fmt::Display for SiteConfigError {
 impl std::error::Error for SiteConfigError {}
 
 impl SiteConfig {
-    pub fn from_env() -> Self {
-        let path = std::env::var("SITE_CONFIG_PATH")
-            .unwrap_or_else(|_| DEFAULT_SITE_CONFIG_PATH.to_string());
-        SiteConfig::load(&path, STATIC_DIR)
-            .unwrap_or_else(|e| panic!("Invalid site config at {path}: {e}"))
-    }
-
     pub fn load(
         path: impl AsRef<Path>,
         static_dir: impl AsRef<Path>,
     ) -> Result<Self, SiteConfigError> {
+        SiteConfig::load_with_assets(path, &[static_dir.as_ref()])
+    }
+
+    pub fn load_with_assets(
+        path: impl AsRef<Path>,
+        asset_dirs: &[&Path],
+    ) -> Result<Self, SiteConfigError> {
         let raw = std::fs::read_to_string(path).map_err(SiteConfigError::Read)?;
         let config = SiteConfig::parse(&raw)?;
-        let missing = config.missing_font_files(static_dir.as_ref());
+        let missing = config.missing_font_files_in(asset_dirs);
         if missing.is_empty() {
             Ok(config)
         } else {
@@ -394,13 +390,21 @@ impl SiteConfig {
     }
 
     pub fn missing_font_files(&self, static_dir: &Path) -> Vec<PathBuf> {
+        self.missing_font_files_in(&[static_dir])
+    }
+
+    pub fn missing_font_files_in(&self, asset_dirs: &[&Path]) -> Vec<PathBuf> {
         self.theme
             .fonts
             .entries()
             .into_iter()
             .flat_map(|(_, font)| &font.faces)
-            .map(|face| static_dir.join(&face.src))
-            .filter(|path| !path.is_file())
+            .filter(|face| !asset_dirs.iter().any(|dir| dir.join(&face.src).is_file()))
+            .map(|face| {
+                asset_dirs
+                    .first()
+                    .map_or_else(|| PathBuf::from(&face.src), |dir| dir.join(&face.src))
+            })
             .collect()
     }
 
@@ -516,7 +520,9 @@ fn is_unicode_range(value: &str) -> bool {
 mod tests {
     use super::*;
 
-    const REPO_SITE_CONFIG: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../site.toml");
+    const FIXTURE_SITE_CONFIG: &str =
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../e2e/fixtures/site.toml");
+    const STARTER: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../starter");
     const REPO_STATIC_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../static");
 
     const VALID: &str = r##"
@@ -573,19 +579,26 @@ src = "fonts/tusker-grotesk/regular.woff2"
 
     #[test]
     fn the_committed_site_config_is_valid_and_its_fonts_exist() {
-        let config = SiteConfig::load(REPO_SITE_CONFIG, REPO_STATIC_DIR);
+        let config = SiteConfig::load(FIXTURE_SITE_CONFIG, REPO_STATIC_DIR);
         assert!(config.is_ok(), "{}", config.unwrap_err());
+
+        let starter_assets = format!("{STARTER}/assets");
+        let starter = SiteConfig::load_with_assets(
+            format!("{STARTER}/site.toml"),
+            &[Path::new(&starter_assets)],
+        );
+        assert!(starter.is_ok(), "{}", starter.unwrap_err());
     }
 
     #[test]
     fn features_default_to_enabled_and_can_be_switched_off() {
         assert_eq!(valid().features, Features::default());
-        assert!(Features::default().chess && Features::default().schedule);
+        assert!(Features::default().chess && Features::default().games);
 
-        let raw = format!("{VALID}\n[features]\nchess = false\nschedule = false\n");
+        let raw = format!("{VALID}\n[features]\nchess = false\ngames = false\n");
         let features = SiteConfig::parse(&raw).unwrap().features;
-        assert!(!features.chess && !features.schedule);
-        assert!(features.news && features.music && features.games);
+        assert!(!features.chess && !features.games);
+        assert!(features.news && features.music);
     }
 
     #[test]
@@ -806,6 +819,32 @@ src = "fonts/tusker-grotesk/regular.woff2"
             panic!("expected validation errors");
         };
         assert_eq!(problems.len(), 2);
+    }
+
+    #[test]
+    fn fonts_can_live_in_any_asset_folder() {
+        let content = tempfile::tempdir().unwrap();
+        let engine = tempfile::tempdir().unwrap();
+        let write = |dir: &Path, src: &str| {
+            let path = dir.join(src);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, b"").unwrap();
+        };
+        write(content.path(), "fonts/iosevka/regular.woff2");
+        write(engine.path(), "fonts/iosevka/italic.woff2");
+
+        let config = valid();
+        let dirs = [content.path(), engine.path()];
+        assert_eq!(
+            config.missing_font_files_in(&dirs),
+            vec![content.path().join("fonts/tusker-grotesk/regular.woff2")]
+        );
+
+        write(engine.path(), "fonts/tusker-grotesk/regular.woff2");
+        let path = content.path().join("site.toml");
+        std::fs::write(&path, VALID).unwrap();
+        assert_eq!(SiteConfig::load_with_assets(&path, &dirs).unwrap(), config);
+        assert!(SiteConfig::load(&path, content.path()).is_err());
     }
 
     #[test]

@@ -4,7 +4,6 @@ macro_rules! texts {
     ($($key:ident),* $(,)?) => {
         pub struct Texts {
             $(pub $key: &'static str,)*
-            pub schedule: [&'static str; 24],
         }
 
         impl Texts {
@@ -28,8 +27,6 @@ texts! {
     nav_browse,
     menu_toggle,
     footer_source,
-    schedule_loading,
-    schedule_unknown,
     loading,
     search_placeholder_mobile,
     search_placeholder,
@@ -193,7 +190,6 @@ texts! {
     admin_font_unknown,
     admin_font_weight_missing,
     admin_features,
-    admin_feature_schedule,
     admin_feature_inactive,
     admin_preview,
     admin_preview_heading,
@@ -241,19 +237,6 @@ mod tests {
 
         for ((key, en), (_, es)) in english.into_iter().zip(spanish) {
             assert_eq!(en.matches("{}").count(), es.matches("{}").count(), "{key}");
-        }
-    }
-
-    #[test]
-    fn every_hour_has_an_activity_in_every_language() {
-        for locale in Locale::ALL {
-            assert!(
-                locale
-                    .texts()
-                    .schedule
-                    .iter()
-                    .all(|activity| !activity.is_empty())
-            );
         }
     }
 }

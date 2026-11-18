@@ -193,16 +193,6 @@ async fn the_layout_follows_the_language() {
 }
 
 #[tokio::test]
-async fn the_schedule_speaks_the_language() {
-    let app = TestApp::spawn().await;
-
-    assert_ne!(
-        app.htmx_get_in("/schedule", "es").await,
-        app.htmx_get_in("/schedule", "en").await
-    );
-}
-
-#[tokio::test]
 async fn cached_pages_are_kept_per_language() {
     let app = TestApp::spawn().await;
     e2e::mocks::mount_steam(

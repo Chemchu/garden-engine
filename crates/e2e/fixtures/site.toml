@@ -1,6 +1,6 @@
 [site]
 name = "Gus' digital garden"
-source_url = "https://github.com/Chemchu/guslee"
+source_url = "https://github.com/Chemchu/garden-engine"
 
 [site.description]
 en = "My personal digital garden, built with Rust + HTMX"
@@ -46,4 +46,3 @@ news = true
 chess = true
 music = true
 games = true
-schedule = true

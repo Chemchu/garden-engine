@@ -20,7 +20,7 @@ surrealdb = { version = "3.3.4", features = ["kv-mem", "protocol-ws"], default-f
 tempfile = "3.27.0"
 
 [package]
-name = "guslee"
+name = "garden-engine"
 version = "0.1.0"
 edition = "2024"
 
@@ -45,6 +45,9 @@ cached = { version = "4.0.3", features = ["async", "time_stores"] }
 chrono.workspace = true
 tokio = { workspace = true, features = ["time"] }
 dotenvy = "0.15.7"
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [profile.dev]
 opt-level = 0

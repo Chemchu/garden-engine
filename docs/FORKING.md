@@ -1,111 +1,117 @@
 # Make it yours
 
-This walks you through forking the project, deploying it to
-[Fly.io](https://fly.io/) and personalising it.
+Your garden is a repository of your own that holds only content. The engine
+lives here and is published as a Docker image, so you never fork it, build it
+or touch Rust.
 
-## 1. Fork the repository
+| Repository             | Holds                                                       | Its CI                                                                           |
+| ---------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Yours, from `starter/` | `garden/`, `site.toml`, `assets/`, `Dockerfile`, `fly.toml` | Checks content on pull requests, deploys pushes to `main`, applies site settings |
+| This one (the engine)  | The server, templates, scripts and styles                   | Tests, and publishes `ghcr.io/chemchu/garden-engine` on version tags             |
 
-Fork it on GitHub. Everything below happens in your fork.
+Your `Dockerfile` starts `FROM` an exact engine version and copies your content
+into it. Deploying builds that image and ships it to Fly.io, so what you check
+in a pull request is exactly what goes live.
 
-## 2. Turn on GitHub Actions
+## Getting started
 
-Forks start with Actions disabled. In your fork:
+Copy the [starter kit](../starter) into a new public repository and follow its
+README. It takes six steps: name the Fly.io app, create its deploy token, set
+up the admin account, let the workflows open pull requests and push.
 
-1. Open the **Actions** tab and enable workflows.
-2. Go to **Settings → Actions → General → Workflow permissions** and tick
-   **Allow GitHub Actions to create and approve pull requests**. The settings
-   workflow needs it to open pull requests for you.
+## Sections
 
-## 3. Know which sections you'll get
+| Section | What it shows                       | Needs                 |
+| ------- | ----------------------------------- | --------------------- |
+| `news`  | Latest posts                        | nothing               |
+| `chess` | Lichess stats and games             | `LICHESS_*` variables |
+| `music` | Spotify top artists and tracks      | `SPOTIFY_*` variables |
+| `games` | Steam profile and most played games | `STEAM_*` variables   |
 
-| Section    | What it shows                       | Needs                 |
-| ---------- | ----------------------------------- | --------------------- |
-| `news`     | Latest posts                        | nothing               |
-| `chess`    | Lichess stats and games             | `LICHESS_*` variables |
-| `music`    | Spotify top artists and tracks      | `SPOTIFY_*` variables |
-| `games`    | Steam profile and most played games | `STEAM_*` variables   |
-| `schedule` | "What I'm doing now" in the header  | nothing (see below)   |
+Set the variables with `fly secrets set` (see
+[Environment variables](CONFIGURATION.md#environment-variables)) and switch the
+section on from the admin page. A section that is switched on but has no
+credentials stays hidden: the logs say which variable is missing and the admin
+page marks it as inactive.
 
-`site.toml` comes with every section turned on, and you don't need to change
-that before deploying: a section whose credentials aren't set is switched off
-when the server starts (the logs say which variable is missing), and the admin
-page marks it as inactive. Set its variables later and restart to bring it
-back, or switch it off from the admin page.
+## The admin page
 
-The schedule texts are mine (they live in `src/i18n/en.rs` and
-`src/i18n/es.rs`), so you'll probably want to switch it off from the admin page
-unless you edit them.
-
-## 4. Create the Fly.io app
-
-With the [flyctl](https://fly.io/docs/flyctl/install/) CLI:
-
-```sh
-fly auth login
-fly apps create your-app-name
-fly tokens create deploy --app your-app-name
-```
-
-Then, in your fork on GitHub:
-
-- **Settings → Secrets and variables → Actions → Secrets**: add
-  `FLY_API_TOKEN` with the token you just created.
-- **Settings → Secrets and variables → Actions → Variables**: add
-  `FLY_APP_NAME` with your app name. The deploy uses it instead of the `app`
-  value in `fly.toml`.
-
-If you want the app to run somewhere other than Stockholm, change
-`primary_region` in `fly.toml`.
-
-## 5. Set the runtime secrets
-
-```sh
-fly secrets set --app your-app-name \
-  REPO_SOURCE="https://github.com/<you>/<your-fork>/blob/main" \
-  ADMIN_USERNAME="you" \
-  ADMIN_PASSWORD="a long passphrase" \
-  ADMIN_SECRET_KEY="$(openssl rand -hex 32)"
-```
-
-Add the credentials of the sections you want (see
-[Environment variables](CONFIGURATION.md#environment-variables)). Sections
-without them are simply left out.
-
-## 6. Deploy
-
-Push anything to `main`, or re-run the latest **Build, Test, and Deploy**
-workflow. Tests run first, then the site is deployed to Fly.io.
-
-## 7. Personalise it from the admin page
-
-Open `https://your-app-name.fly.dev/admin`, sign in, and change:
+Open `https://<your-app>.fly.dev/admin` and sign in. You can change:
 
 - the site name, its description in each language, the footer links and the
-  source code link (they still point to me after forking)
-- the colors
-- the fonts: any font from [Google Fonts](https://fonts.google.com/) or from
-  [Fontsource](https://fontsource.org/)'s open-source collection (Iosevka,
-  Monaspace, Commit Mono, Geist and more), by name
-- which sections are shown
+  source code link;
+- the colors and the corner radius;
+- the fonts, picked from [Google Fonts](https://fonts.google.com/) and
+  [Fontsource](https://fontsource.org/)'s open-source collection, each one
+  shown in its own typeface;
+- which sections are shown.
 
-There's a live preview on the page. When you're happy, press **Continue on
-GitHub**:
+Everything previews live on the page, and two buttons reset the styles or the
+details to what is deployed. When you're happy, press **Continue on GitHub**:
 
 1. GitHub opens with an issue already filled in. Submit it.
-2. The **Site settings** workflow checks the request, downloads the fonts,
-   updates `site.toml` and opens a pull request. It comments on the issue with
-   the link, or with what went wrong.
-3. Review and merge the pull request. Merging deploys the new version.
+2. The **Site settings** workflow:
+   - checks the request;
+   - downloads any new fonts into `assets/fonts/`;
+   - updates `site.toml`;
+   - opens a pull request that lists every change.
+
+   It comments on the issue with the link, or with what went wrong.
+
+3. The **Check** workflow runs on that pull request. Merge it to deploy.
 
 Only issues opened by the repository owner are processed, and nothing is
 deployed until you merge.
 
-## 8. Write your own posts
+## Writing
 
-Posts are the Markdown files in [garden](../garden). `garden/welcome.md` is the
-landing page. Replace mine with yours.
+Posts are the Markdown files in `garden/`, and `garden/welcome.md` is the home
+page. The starter's two guide notes explain the rest:
 
-## Keeping your fork up to date
+- front matter, tags and drafts;
+- translations;
+- wikilinks, links to headings and embeds.
 
-Use **Sync fork** on GitHub. If it conflicts on `site.toml` or the `garden`
-folder, keep your version: those are your settings and your posts.
+Run `garden-engine check` inside your site image to catch problems before you push:
+
+```sh
+docker build -t my-garden . && docker run --rm my-garden ./garden-engine check
+```
+
+## Upgrading the engine
+
+Change the version in the first line of your `Dockerfile`. Dependabot does it
+for you with a weekly pull request when a new engine is released, and the
+Check workflow runs on it. Merging deploys the new engine with your content.
+
+## Moving an existing fork of this repository
+
+If you forked the engine before the content moved out, you can keep your posts
+and their history. The "last updated" dates come from that history. With
+[git filter-repo](https://github.com/newren/git-filter-repo) installed:
+
+```sh
+git clone https://github.com/<you>/<your-fork> my-garden
+cd my-garden
+git filter-repo \
+  --path garden --path site.toml --path static/fonts \
+  --path-rename static/fonts:assets/fonts
+```
+
+Then copy in everything from `starter/` except `garden/`, `site.toml` and
+`assets/`:
+
+- the `Dockerfile`;
+- `fly.toml`, with your app name and `REPO_SOURCE` pointing at the new
+  repository;
+- the `.github/` folder, `.gitignore` and `.dockerignore`.
+
+Commit it and push it to a new public repository. Then:
+
+- add `FLY_API_TOKEN` to the new repository;
+- allow Actions to create pull requests;
+- run `fly secrets unset REPO_SOURCE` if you had set it as a secret, since
+  `fly.toml` sets it now.
+
+The first push deploys the same site from the new repository. After that you can
+delete the old fork's deploy token.

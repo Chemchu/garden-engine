@@ -1,14 +1,13 @@
 use e2e::{ADMIN_PASSWORD, ADMIN_USERNAME, TestApp};
-use guslee::site_config::Features;
+use garden_engine::site_config::Features;
 use reqwest::{Client, header, redirect::Policy};
 
-const FEATURE_ROUTES: [&str; 6] = [
+const FEATURE_ROUTES: [&str; 5] = [
     "/news",
     "/chess/stats/blitz",
     "/chess/games/analysis",
     "/music/profile",
     "/steam",
-    "/schedule",
 ];
 
 const NONE: Features = Features {
@@ -16,7 +15,6 @@ const NONE: Features = Features {
     chess: false,
     music: false,
     games: false,
-    schedule: false,
 };
 
 #[tokio::test]
@@ -48,7 +46,6 @@ async fn features_can_be_switched_off_one_at_a_time() {
     .await;
 
     assert_eq!(app.htmx_get("/music/profile").await.status, 404);
-    assert_eq!(app.htmx_get("/schedule").await.status, 200);
 
     let home = app.get("/posts/welcome").await.body;
     assert!(!home.contains("/music/profile"));
@@ -65,7 +62,6 @@ async fn sections_without_credentials_are_switched_off_but_stay_configured() {
         assert_eq!(app.htmx_get(path).await.status, 404, "{path}");
     }
     assert_eq!(app.htmx_get("/news").await.status, 200);
-    assert_eq!(app.htmx_get("/schedule").await.status, 200);
 
     let home = app.get("/posts/welcome").await.body;
     assert!(!home.contains("chess-link") && !home.contains("music-link"));
