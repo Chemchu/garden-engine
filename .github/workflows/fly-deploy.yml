@@ -98,6 +98,14 @@ jobs:
 
       - name: Check the content
         run: docker run --rm guslee:test ./guslee check
+
+      - name: Check the starter kit on this engine
+        run: |
+          sed '1s|^FROM .*|FROM guslee:test|' starter/Dockerfile > "$RUNNER_TEMP/starter.Dockerfile"
+          docker buildx build --builder default --load \
+            -f "$RUNNER_TEMP/starter.Dockerfile" -t starter:test starter
+          docker run --rm starter:test ./guslee check
+          docker run --rm starter:test test -f /app/site/assets/fonts/inter/latin-400-normal.woff2
       
       - name: Start container
         run: |

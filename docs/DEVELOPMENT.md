@@ -101,6 +101,31 @@ and points `CONTENT_DIR` at it.
 The first publish creates a private package. Make it public once under the
 package's settings on GitHub so anyone can pull it.
 
+## The starter kit
+
+`starter/` is the template that people copy to run their own garden. It has:
+
+- demo posts and a `site.toml`;
+- Inter and Lora in `assets/fonts`, with their licenses;
+- a Dockerfile that starts `FROM` a published engine version;
+- `fly.toml`;
+- workflows to check, deploy and apply site settings, plus Dependabot to upgrade
+  the engine.
+
+It's tested here:
+
+- `the_starter_kit_is_clean` runs `guslee check` on it and expects no problems
+  and no warnings;
+- `crates/e2e/tests/starter.rs` renders its posts and checks that every link
+  resolves;
+- the Docker test job builds the starter on top of the engine image that CI just
+  built, and checks it again.
+
+To publish it as the template repository, copy the contents of `starter/` into
+a new public repository and tick "Template repository" in its settings. After
+each engine release, update the version in `starter/Dockerfile` and copy the
+change across.
+
 ## Hacky solutions
 
 ### Tailwind Prose

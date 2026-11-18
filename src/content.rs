@@ -270,6 +270,18 @@ mod tests {
     }
 
     #[test]
+    fn the_starter_kit_is_clean() {
+        let paths = ContentPaths::new("starter", None);
+        assert_eq!(paths.assets, Some(PathBuf::from("starter/assets")));
+
+        let report = check_content(&paths);
+
+        assert_eq!(report.posts, 4);
+        assert!(report.problems.is_empty(), "{}", report.render());
+        assert!(report.warnings.is_empty(), "{}", report.render());
+    }
+
+    #[test]
     fn unreadable_configs_and_missing_gardens_are_problems() {
         let dir = tempfile::tempdir().unwrap();
         let report = check_content(&ContentPaths::new(dir.path(), None));
