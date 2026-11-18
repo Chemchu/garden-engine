@@ -9,6 +9,7 @@ const CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 const FAILURE_TTL: Duration = Duration::from_secs(60);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const GOOGLE_TYPE: &str = "google";
+const DEFAULT_SUBSET: &str = "latin";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CatalogFont {
@@ -16,6 +17,11 @@ pub struct CatalogFont {
     pub family: String,
     pub weights: Vec<u16>,
     pub category: String,
+    #[serde(
+        rename(deserialize = "defSubset", serialize = "subset"),
+        default = "default_subset"
+    )]
+    pub subset: String,
     #[serde(rename = "type", skip_serializing)]
     pub kind: String,
 }
@@ -35,6 +41,10 @@ impl CatalogFont {
             .copied()
             .min_by_key(|weight| (weight.abs_diff(wanted), *weight))
     }
+}
+
+fn default_subset() -> String {
+    DEFAULT_SUBSET.to_string()
 }
 
 type CatalogResult = Result<Arc<Vec<CatalogFont>>, String>;
@@ -138,6 +148,7 @@ mod tests {
             "id": id,
             "family": family,
             "subsets": ["latin"],
+            "defSubset": "latin",
             "weights": weights,
             "styles": ["normal"],
             "category": category,
@@ -190,6 +201,29 @@ mod tests {
             .collect();
 
         assert_eq!(ids, vec!["inter", "iosevka", "roboto"]);
+    }
+
+    #[tokio::test]
+    async fn every_font_knows_which_subset_to_preview() {
+        let server = MockServer::start().await;
+        let mut khmer = font("khmer", "Khmer", &[400], "sans-serif", "google");
+        khmer["subsets"] = json!(["khmer"]);
+        khmer["defSubset"] = json!("khmer");
+        let mut older = font("older", "Older", &[400], "serif", "google");
+        older.as_object_mut().unwrap().remove("defSubset");
+        Mock::given(method("GET"))
+            .and(path("/v1/fonts"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!([khmer, older])))
+            .mount(&server)
+            .await;
+
+        let fonts = FontCatalog::new(server.uri()).fonts().await.unwrap();
+        let subsets: Vec<(&str, &str)> = fonts
+            .iter()
+            .map(|font| (font.id.as_str(), font.subset.as_str()))
+            .collect();
+
+        assert_eq!(subsets, vec![("khmer", "khmer"), ("older", "latin")]);
     }
 
     #[tokio::test]
@@ -283,6 +317,7 @@ mod tests {
             family: "Inter".to_string(),
             weights: vec![400, 800],
             category: "sans-serif".to_string(),
+            subset: "latin".to_string(),
             kind: "google".to_string(),
         };
 

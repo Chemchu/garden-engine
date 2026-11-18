@@ -139,7 +139,10 @@ async fn the_settings_page_starts_from_the_current_site() {
     assert!(page.contains(r#"<option value="Inter">Google Fonts</option>"#));
     assert!(page.contains(r#"<option value="Iosevka">Fontsource, open source</option>"#));
     assert!(page.contains(r#"name="feature_chess" checked"#));
-    assert!(page.contains(r#""id":"lora","family":"Lora","weights":[400,700]"#));
+    assert!(page.contains(
+        r#""id":"lora","family":"Lora","weights":[400,700],"category":"serif","subset":"latin""#
+    ));
+    assert!(page.contains(r#""id":"iosevka","family":"Iosevka","weights":[400,600],"category":"monospace","subset":"latin""#));
     assert!(page.contains(r#"<script src="/_static/admin-settings.js"></script>"#));
     assert!(page.contains(r#"data-font-cdn="https://cdn.jsdelivr.net/fontsource/fonts""#));
     assert!(!page.contains("font catalog is unavailable"));

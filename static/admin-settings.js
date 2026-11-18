@@ -74,7 +74,7 @@
     const family = `preview-${role}-${font.id}-${weight}`;
     const face = new FontFace(
       family,
-      `url(${form.dataset.fontCdn}/${font.id}@latest/latin-${weight}-normal.woff2)`,
+      `url(${form.dataset.fontCdn}/${font.id}@latest/${font.subset}-${weight}-normal.woff2)`,
       { weight },
     );
     document.fonts.add(face);

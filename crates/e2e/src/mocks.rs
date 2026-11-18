@@ -66,6 +66,7 @@ pub async fn mount_font_catalog(app: &TestApp) {
             "id": id,
             "family": family,
             "subsets": ["latin"],
+            "defSubset": "latin",
             "weights": weights,
             "styles": ["normal"],
             "category": category,

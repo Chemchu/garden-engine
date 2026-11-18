@@ -695,10 +695,12 @@ mod tests {
             family: "</script><script>alert(1)</script>".to_string(),
             weights: vec![400],
             category: "serif".to_string(),
+            subset: "khmer".to_string(),
             kind: "google".to_string(),
         }];
 
         let json = catalog_json(&fonts);
+        assert!(json.contains(r#""subset":"khmer""#) && !json.contains("defSubset"));
         assert!(!json.contains('<'));
         assert!(!json.contains("\"kind\"") && !json.contains("\"type\""));
         assert_eq!(catalog_json(&[]), "[]");
