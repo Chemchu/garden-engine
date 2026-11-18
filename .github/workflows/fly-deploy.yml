@@ -88,12 +88,13 @@ jobs:
       - name: Verify files exist
         run: |
           docker run --rm guslee:test ls -la /app
-          docker run --rm guslee:test test -f ./guslee
-          docker run --rm guslee:test test -d ./garden
+          docker run --rm guslee:test test -x ./guslee
+          docker run --rm guslee:test test -x ./site-settings
           docker run --rm guslee:test test -d ./static
           docker run --rm guslee:test test -d ./templates
-          docker run --rm guslee:test test -f ./site.toml
-          docker run --rm guslee:test test -s ./garden-dates.txt
+          docker run --rm guslee:test test -d ./content/garden
+          docker run --rm guslee:test test -f ./content/site.toml
+          docker run --rm guslee:test test -s ./content/garden-dates.txt
 
       - name: Check the content
         run: docker run --rm guslee:test ./guslee check

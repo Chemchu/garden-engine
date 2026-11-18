@@ -71,6 +71,36 @@ cargo test -p e2e        # end-to-end only
 - Handlers cache upstream responses process-wide, so each e2e file that talks to
   an external service keeps its scenarios in a single test function, in order.
 
+## Releasing the engine image
+
+Pushing a version tag publishes the engine to the GitHub Container Registry:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The `Publish image` workflow builds the Dockerfile and checks the bundled content
+with `guslee check`. Only then does it push `ghcr.io/<owner>/guslee` as `1.0.0`,
+`1.0` and `1`. Tag a commit on `main` whose CI already passed. Use `v1.0.0` or
+later: the `1` tag isn't created for `0.x` versions.
+
+The image contains:
+
+| Path                 | What                                                  |
+| -------------------- | ----------------------------------------------------- |
+| `/app/guslee`        | The server, and `guslee check` for content            |
+| `/app/site-settings` | The tool the settings workflow runs                   |
+| `/app/static`        | Engine scripts, styles and default fonts              |
+| `/app/templates`     | Page templates                                        |
+| `/app/content`       | Bundled content. `CONTENT_DIR` points here by default |
+
+A content repo builds `FROM` this image, copies its own folder into the image,
+and points `CONTENT_DIR` at it.
+
+The first publish creates a private package. Make it public once under the
+package's settings on GitHub so anyone can pull it.
+
 ## Hacky solutions
 
 ### Tailwind Prose
