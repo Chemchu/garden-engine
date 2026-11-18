@@ -7,7 +7,7 @@ use crate::controllers::admin_controller::{AdminAuth, logout_form};
 use crate::i18n::{Locale, Texts, fill};
 use crate::settings::{FONTSOURCE_CDN_URL, FontRequest, FontRequests, SettingsRequest};
 use crate::site_config::{
-    Colors, Features, Font, FontFallback, Identity, Link, MAX_RADIUS, SiteConfig,
+    Colors, Features, Font, FontFallback, FontStyle, Fonts, Identity, Link, MAX_RADIUS, SiteConfig,
 };
 
 pub const KEEP_FONT: &str = "keep";
@@ -348,16 +348,7 @@ pub async fn render(
                     }
                 }
 
-                section class="rounded-box flex flex-col gap-2 border border-shade-color p-4" {
-                    h2 class="text-sm uppercase opacity-70" { (t.admin_preview) }
-                    h3 class="text-3xl text-primary-color" { (t.admin_preview_heading) }
-                    p { (t.admin_preview_body) }
-                    p class="flex gap-4" {
-                        span class="text-secondary-color" { (t.admin_color_secondary) }
-                        span class="text-accent-color" { (t.admin_color_accent) }
-                        span class="bg-shade-color px-1" { (t.admin_color_shade) }
-                    }
-                }
+                (preview_section(fonts, t))
 
                 div class="flex flex-col gap-2" {
                     p class="text-sm opacity-70" { (t.admin_reset_hint) }
@@ -383,6 +374,82 @@ pub async fn render(
         }
     }
     .into_string()
+}
+
+fn preview_section(fonts: &Fonts, t: &Texts) -> Markup {
+    html! {
+        section id="settings-preview" class="rounded-box flex flex-col gap-4 border border-shade-color p-4" {
+            h2 class="text-sm uppercase opacity-70" { (t.admin_preview) }
+            label class="flex flex-col gap-1" {
+                span class="text-sm" { (t.admin_preview_sample) }
+                input
+                type="text"
+                data-preview-sample
+                value=(t.admin_preview_heading)
+                maxlength="120"
+                autocomplete="off"
+                class=(INPUT_CLASS);
+            }
+            h3 data-sample-text=(t.admin_preview_heading) class="text-3xl text-primary-color break-words" { (t.admin_preview_heading) }
+            div class="prose prose-theme max-w-none" {
+                p { (t.admin_preview_body) }
+                p {
+                    a href="#settings-preview" { (t.admin_preview_link) } ", "
+                    strong { (t.admin_preview_bold) } ", "
+                    em { (t.admin_preview_italic) } ", "
+                    code { (t.admin_preview_code) }
+                }
+            }
+            @for (role, label, font) in [
+                ("body", t.admin_font_body, &fonts.body),
+                ("heading", t.admin_font_heading, &fonts.heading),
+            ] {
+                div class="flex flex-col gap-1" {
+                    p class="text-sm opacity-70" { (label) " · " (t.admin_preview_weights) }
+                    div
+                    data-specimen=(role)
+                    data-kept-weights=(kept_weights(font))
+                    data-kept-weight=(font.main_weight())
+                    class="flex flex-wrap gap-3" {}
+                    p
+                    data-font-status=(role)
+                    data-loading=(t.admin_preview_loading)
+                    data-failed=(t.admin_preview_failed)
+                    aria-live="polite"
+                    class="text-sm text-primary-color" {}
+                }
+            }
+            div class="rounded-box flex flex-col gap-3 border border-primary-color bg-shade-color p-4" {
+                h4 data-sample-text=(t.admin_preview_heading) class="text-xl break-words" { (t.admin_preview_heading) }
+                p class="text-sm" { (t.admin_preview_body) }
+                div class="flex flex-wrap items-center gap-3 text-sm" {
+                    span class="rounded-box bg-primary-color px-3 py-1 text-background-color" { (t.admin_preview_button) }
+                    span class="rounded-box border border-secondary-color px-2 text-secondary-color" { (t.admin_preview_tag) }
+                    span class="text-accent-color" { (t.admin_color_accent) }
+                    span class="rounded-box bg-background-color px-2" { (t.admin_color_background) }
+                }
+            }
+        }
+    }
+}
+
+fn kept_weights(font: &Font) -> String {
+    let mut weights: Vec<u16> = font
+        .faces
+        .iter()
+        .filter(|face| face.style == FontStyle::Normal)
+        .map(|face| face.weight)
+        .collect();
+    if weights.is_empty() {
+        weights = font.faces.iter().map(|face| face.weight).collect();
+    }
+    weights.sort_unstable();
+    weights.dedup();
+    weights
+        .iter()
+        .map(u16::to_string)
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn reset_button(group: &str, label: &str) -> Markup {
@@ -828,6 +895,54 @@ mod tests {
                 .collect();
             assert!(names.iter().all(|name| !name.is_empty()), "{names:?}");
         }
+    }
+
+    #[test]
+    fn kept_weights_list_the_upright_faces_once() {
+        let face = |weight, style| crate::site_config::FontFace {
+            src: "fonts/x/x.woff2".to_string(),
+            weight,
+            style,
+            unicode_range: None,
+        };
+        let mut font = site().theme.fonts.body;
+        font.faces = vec![
+            face(700, FontStyle::Normal),
+            face(400, FontStyle::Italic),
+            face(400, FontStyle::Normal),
+            face(700, FontStyle::Normal),
+        ];
+        assert_eq!(kept_weights(&font), "400 700");
+
+        font.faces = vec![face(300, FontStyle::Italic)];
+        assert_eq!(kept_weights(&font), "300");
+    }
+
+    #[test]
+    fn the_preview_shows_samples_specimens_and_a_card() {
+        let site = site();
+        let html = preview_section(&site.theme.fonts, Locale::En.texts()).into_string();
+
+        assert!(
+            html.contains(r#"<input type="text" data-preview-sample value="The quick brown fox""#)
+        );
+        assert_eq!(
+            html.matches(r#"data-sample-text="The quick brown fox""#)
+                .count(),
+            2
+        );
+        assert!(html.contains("<strong>bold text</strong>"));
+        assert!(html.contains("<code>inline code</code>"));
+        for role in ["body", "heading"] {
+            assert!(html.contains(&format!(
+                r#"data-specimen="{role}" data-kept-weights="600" data-kept-weight="600""#
+            )));
+            assert!(html.contains(&format!(
+                r#"data-font-status="{role}" data-loading="Loading {{}}…""#
+            )));
+        }
+        assert!(html.contains(r#"aria-live="polite""#));
+        assert!(!html.contains("name="));
     }
 
     #[test]

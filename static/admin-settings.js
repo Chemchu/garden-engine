@@ -109,11 +109,61 @@
   }
 
   const pickers = new Map();
+  const latestPreview = new Map();
+  const specimenFaces = new Set();
+
+  function fontStatus(role, key, font) {
+    const status = form.querySelector(`[data-font-status="${role}"]`);
+    if (status) {
+      status.textContent = key ? status.dataset[key].replace("{}", font.family) : "";
+    }
+  }
+
+  function renderSpecimen(role, font) {
+    const specimen = form.querySelector(`[data-specimen="${role}"]`);
+    if (!specimen) {
+      return;
+    }
+    const weights = font
+      ? font.weights
+      : specimen.dataset.keptWeights.split(" ").filter(Boolean).map(Number);
+    const chosen = font ? Number(field(role, "weight").value) : Number(specimen.dataset.keptWeight);
+    const family = font ? `"specimen-${font.id}", sans-serif` : `var(--font-${role})`;
+
+    specimen.replaceChildren(
+      ...weights.map((weight) => {
+        if (font && !specimenFaces.has(`${font.id}-${weight}`)) {
+          specimenFaces.add(`${font.id}-${weight}`);
+          const face = new FontFace(`specimen-${font.id}`, fontUrl(font, weight), {
+            weight: String(weight),
+          });
+          document.fonts.add(face);
+          face.load().catch(() => {});
+        }
+        const item = document.createElement("span");
+        item.className = `rounded-box flex flex-col items-center border px-2 py-1 ${
+          weight === chosen ? "border-primary-color" : "border-shade-color"
+        }`;
+        const sample = document.createElement("span");
+        sample.className = "text-2xl";
+        sample.textContent = "Aa";
+        sample.style.fontFamily = family;
+        sample.style.fontWeight = String(weight);
+        const label = document.createElement("span");
+        label.className = "text-xs opacity-70";
+        label.textContent = String(weight);
+        item.append(sample, label);
+        return item;
+      }),
+    );
+  }
 
   function previewFont(role) {
     pickers.get(role)?.sync();
     const font = findFont(field(role, "font").value);
     const weightSelect = field(role, "weight");
+    const request = Symbol(role);
+    latestPreview.set(role, request);
 
     weightSelect.disabled = !font;
     for (const option of weightSelect.options) {
@@ -123,12 +173,16 @@
     if (!font) {
       root.style.removeProperty(`--font-${role}`);
       root.style.removeProperty(`--font-${role}-weight`);
+      fontStatus(role, null);
+      renderSpecimen(role, null);
       return;
     }
 
     if (weightSelect.selectedOptions[0]?.disabled) {
       weightSelect.value = String(closestWeight(font, Number(weightSelect.value)));
     }
+    renderSpecimen(role, font);
+    fontStatus(role, "loading", font);
 
     const weight = weightSelect.value;
     const fallback = field(role, "fallback").value;
@@ -138,13 +192,18 @@
     face
       .load()
       .then(() => {
-        if (!form.isConnected) {
+        if (!form.isConnected || latestPreview.get(role) !== request) {
           return;
         }
         root.style.setProperty(`--font-${role}`, `"${family}", ${fallback}`);
         root.style.setProperty(`--font-${role}-weight`, weight);
+        fontStatus(role, null);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (latestPreview.get(role) === request) {
+          fontStatus(role, "failed", font);
+        }
+      });
   }
 
   form.querySelectorAll("input[type=color]").forEach((input) => {
@@ -413,6 +472,13 @@
     input.hidden = true;
     form.querySelector("[data-font-hint]")?.setAttribute("hidden", "");
   }
+
+  const sample = form.querySelector("[data-preview-sample]");
+  sample?.addEventListener("input", () => {
+    form.querySelectorAll("[data-sample-text]").forEach((element) => {
+      element.textContent = sample.value.trim() || element.dataset.sampleText;
+    });
+  });
 
   ["body", "heading"].forEach(setUpPicker);
   previewRadius();
