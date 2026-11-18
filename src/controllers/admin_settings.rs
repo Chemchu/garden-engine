@@ -11,6 +11,10 @@ use crate::site_config::{Colors, Features, Font, FontFallback, Identity, Link, S
 pub const KEEP_FONT: &str = "keep";
 const WEIGHTS: [u16; 9] = [100, 200, 300, 400, 500, 600, 700, 800, 900];
 const MAX_FONT_INPUT: usize = 100;
+const RESET_STYLES: &str = "styles";
+const RESET_DETAILS: &str = "details";
+const RESET_BUTTON_CLASS: &str =
+    "border border-shade-color px-3 py-1 cursor-pointer hover:border-primary-color";
 const INPUT_CLASS: &str = "border border-shade-color bg-background-color px-2 py-1 outline-none focus:border-primary-color";
 
 #[derive(Deserialize)]
@@ -233,6 +237,7 @@ pub async fn render(
 ) -> String {
     let catalog = admin.fonts.fonts().await.ok();
     let fonts = &app_state.site.theme.fonts;
+    let deployed = FormValues::from_site(&app_state.site);
 
     html! {
         div class="flex flex-col w-full gap-8 p-6 lg:p-8 overflow-auto" {
@@ -256,18 +261,20 @@ pub async fn render(
             }
 
             form id="settings-form" method="post" action="/admin/settings" hx-boost="false" data-font-cdn=(FONTSOURCE_CDN_URL) class="flex flex-col gap-8 max-w-3xl" {
-                (identity_section(&values.identity, t))
+                (identity_section(&values.identity, &deployed.identity, t))
 
                 section class="flex flex-col gap-4" {
                     h2 class="text-2xl" { (t.admin_colors) }
                     div class="grid grid-cols-2 md:grid-cols-3 gap-4" {
-                        @for (name, value) in values.colors.entries() {
+                        @for ((name, value), (_, deployed_value)) in values.colors.entries().into_iter().zip(deployed.colors.entries()) {
                             label class="flex items-center gap-2" {
                                 input
                                 type="color"
                                 name=(format!("color_{name}"))
                                 value=(value)
                                 data-color=(name)
+                                data-reset=(RESET_STYLES)
+                                data-deployed=(deployed_value)
                                 class="h-8 w-12 cursor-pointer bg-transparent";
                                 span { (color_label(t, name)) }
                             }
@@ -281,8 +288,8 @@ pub async fn render(
                     @if catalog.is_none() {
                         p role="status" class="text-primary-color" { (t.admin_font_catalog_down) }
                     }
-                    (font_fieldset("body", t.admin_font_body, &fonts.body, &values.body, t))
-                    (font_fieldset("heading", t.admin_font_heading, &fonts.heading, &values.heading, t))
+                    (font_fieldset("body", t.admin_font_body, &fonts.body, &values.body, &deployed.body, t))
+                    (font_fieldset("heading", t.admin_font_heading, &fonts.heading, &values.heading, &deployed.heading, t))
                     datalist id="font-catalog" {
                         option value=(KEEP_FONT) { (t.admin_font_keep) }
                         @if let Some(catalog) = &catalog {
@@ -298,9 +305,14 @@ pub async fn render(
                 section class="flex flex-col gap-4" {
                     h2 class="text-2xl" { (t.admin_features) }
                     div class="flex flex-wrap gap-4" {
-                        @for ((name, enabled), (_, active)) in values.features.entries().into_iter().zip(app_state.features.entries()) {
+                        @for (((name, enabled), (_, active)), (_, deployed_enabled)) in values.features.entries().into_iter().zip(app_state.features.entries()).zip(deployed.features.entries()) {
                             label class="flex items-center gap-2 cursor-pointer" {
-                                input type="checkbox" name=(format!("feature_{name}")) checked[enabled];
+                                input
+                                type="checkbox"
+                                name=(format!("feature_{name}"))
+                                checked[enabled]
+                                data-reset=(RESET_DETAILS)
+                                data-deployed=(deployed_enabled);
                                 span { (feature_label(t, name)) }
                                 @if enabled && !active {
                                     span class="text-sm text-primary-color" { "(" (t.admin_feature_inactive) ")" }
@@ -322,6 +334,14 @@ pub async fn render(
                 }
 
                 div class="flex flex-col gap-2" {
+                    p class="text-sm opacity-70" { (t.admin_reset_hint) }
+                    div class="flex flex-wrap gap-4" {
+                        (reset_button(RESET_STYLES, t.admin_reset_styles))
+                        (reset_button(RESET_DETAILS, t.admin_reset_details))
+                    }
+                }
+
+                div class="flex flex-col gap-2" {
                     p class="text-sm opacity-70" { (t.admin_submit_hint) }
                     button
                     type="submit"
@@ -339,7 +359,13 @@ pub async fn render(
     .into_string()
 }
 
-fn identity_section(identity: &Identity, t: &Texts) -> Markup {
+fn reset_button(group: &str, label: &str) -> Markup {
+    html! {
+        button type="button" data-reset-group=(group) class=(RESET_BUTTON_CLASS) { (label) }
+    }
+}
+
+fn identity_section(identity: &Identity, deployed: &Identity, t: &Texts) -> Markup {
     let field = |label: &str, input: Markup| {
         html! {
             label class="flex flex-col gap-1" {
@@ -353,7 +379,7 @@ fn identity_section(identity: &Identity, t: &Texts) -> Markup {
         section class="flex flex-col gap-4" {
             h2 class="text-2xl" { (t.admin_identity) }
             (field(t.admin_site_name, html! {
-                input type="text" name="site_name" value=(identity.name) required maxlength="80" class=(INPUT_CLASS);
+                input type="text" name="site_name" value=(identity.name) data-reset=(RESET_DETAILS) data-deployed=(deployed.name) required maxlength="80" class=(INPUT_CLASS);
             }))
             @for locale in Locale::ALL {
                 (field(&fill(t.admin_site_description, locale.as_str()), html! {
@@ -361,15 +387,17 @@ fn identity_section(identity: &Identity, t: &Texts) -> Markup {
                     type="text"
                     name=(format!("description_{}", locale.as_str()))
                     value=[identity.description.get(locale.as_str())]
+                    data-reset=(RESET_DETAILS)
+                    data-deployed=(deployed.description.get(locale.as_str()).map(String::as_str).unwrap_or_default())
                     maxlength="300"
                     class=(INPUT_CLASS);
                 }))
             }
             (field(t.admin_source_url, html! {
-                input type="url" name="site_source_url" value=[identity.source_url.as_deref()] maxlength="300" class=(INPUT_CLASS);
+                input type="url" name="site_source_url" value=[identity.source_url.as_deref()] data-reset=(RESET_DETAILS) data-deployed=(deployed.source_url.as_deref().unwrap_or_default()) maxlength="300" class=(INPUT_CLASS);
             }))
             (field(t.admin_links, html! {
-                textarea name="site_links" rows="4" spellcheck="false" class=(INPUT_CLASS) { (links_text(&identity.links)) }
+                textarea name="site_links" rows="4" spellcheck="false" data-reset=(RESET_DETAILS) data-deployed=(links_text(&deployed.links)) class=(INPUT_CLASS) { (links_text(&identity.links)) }
             }))
             p class="text-sm opacity-70" { (t.admin_links_hint) }
         }
@@ -401,7 +429,14 @@ fn links_text(links: &[Link]) -> String {
         .join("\n")
 }
 
-fn font_fieldset(role: &str, label: &str, current: &Font, field: &FontField, t: &Texts) -> Markup {
+fn font_fieldset(
+    role: &str,
+    label: &str,
+    current: &Font,
+    field: &FontField,
+    deployed: &FontField,
+    t: &Texts,
+) -> Markup {
     html! {
         fieldset class="flex flex-col gap-2 border border-shade-color p-4" {
             legend class="px-1" { (label) }
@@ -412,6 +447,8 @@ fn font_fieldset(role: &str, label: &str, current: &Font, field: &FontField, t: 
             value=(field.value)
             list="font-catalog"
             data-font-role=(role)
+            data-reset=(RESET_STYLES)
+            data-deployed=(deployed.value)
             autocomplete="off"
             spellcheck="false"
             maxlength=(MAX_FONT_INPUT)
@@ -419,7 +456,7 @@ fn font_fieldset(role: &str, label: &str, current: &Font, field: &FontField, t: 
             div class="flex flex-wrap gap-4" {
                 label class="flex flex-col gap-1" {
                     span class="text-sm" { (t.admin_font_weight) }
-                    select name=(format!("{role}_weight")) data-font-role=(role) disabled[is_keep(&field.value)] class=(INPUT_CLASS) {
+                    select name=(format!("{role}_weight")) data-font-role=(role) data-reset=(RESET_STYLES) data-deployed=[deployed.weight] disabled[is_keep(&field.value)] class=(INPUT_CLASS) {
                         @for weight in WEIGHTS {
                             option value=(weight) selected[Some(weight) == field.weight] { (weight) }
                         }
@@ -427,7 +464,7 @@ fn font_fieldset(role: &str, label: &str, current: &Font, field: &FontField, t: 
                 }
                 label class="flex flex-col gap-1" {
                     span class="text-sm" { (t.admin_font_fallback) }
-                    select name=(format!("{role}_fallback")) data-font-role=(role) class=(INPUT_CLASS) {
+                    select name=(format!("{role}_fallback")) data-font-role=(role) data-reset=(RESET_STYLES) data-deployed=(deployed.fallback.as_css()) class=(INPUT_CLASS) {
                         @for fallback in FontFallback::ALL {
                             option value=(fallback.as_css()) selected[fallback == field.fallback] {
                                 (fallback.as_css())
@@ -571,7 +608,9 @@ mod tests {
         let langs: Vec<&str> = Locale::ALL.iter().map(|locale| locale.as_str()).collect();
         assert_eq!(langs, vec!["en", "es"]);
 
-        let html = identity_section(&site().identity, Locale::En.texts()).into_string();
+        let site = site();
+        let html =
+            identity_section(&site.identity, &site.identity, Locale::En.texts()).into_string();
         assert!(html.contains(r#"name="description_en" value="My personal digital garden"#));
         assert!(html.contains(r#"name="description_es""#));
         assert!(
@@ -637,6 +676,7 @@ mod tests {
             "Body",
             &site.theme.fonts.body,
             &field,
+            &FontField::keeping(&site.theme.fonts.body),
             Locale::En.texts(),
         )
         .into_string();
@@ -657,11 +697,12 @@ mod tests {
             "Body",
             &site.theme.fonts.body,
             &FontField::keeping(&site.theme.fonts.body),
+            &FontField::keeping(&site.theme.fonts.body),
             Locale::En.texts(),
         )
         .into_string();
 
-        assert!(html.contains(r#"data-font-role="body" disabled"#));
+        assert!(html.contains(r#"data-deployed="600" disabled"#));
         assert!(is_keep(" KEEP ") && is_keep("") && !is_keep("Inter"));
     }
 }

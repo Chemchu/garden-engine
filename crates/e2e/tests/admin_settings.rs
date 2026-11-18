@@ -408,3 +408,42 @@ async fn settings_need_a_session_and_the_same_origin() {
         .unwrap();
     assert_eq!(cross_site.status(), StatusCode::FORBIDDEN);
 }
+
+#[tokio::test]
+async fn reset_buttons_bring_back_the_deployed_values_after_a_failed_submit() {
+    let app = TestApp::spawn_with_admin().await;
+    mocks::mount_font_catalog(&app).await;
+    let admin = Admin::sign_in(&app).await;
+
+    let response = admin
+        .submit(
+            &[
+                ("site_name", "Typed name"),
+                ("description_en", "Typed description"),
+                ("color_primary", "not-a-color"),
+                ("color_accent", "#abcdef"),
+                ("body_font", "Lora"),
+                ("body_weight", "700"),
+                ("body_fallback", "serif"),
+            ],
+            &["feature_chess"],
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    let page = response.text().await.unwrap();
+
+    assert!(page.contains(r#"data-reset-group="styles""#));
+    assert!(page.contains(r#"data-reset-group="details""#));
+    for fragment in [
+        r##"value="Typed name" data-reset="details" data-deployed="E2E garden""##,
+        r##"value="Typed description" data-reset="details" data-deployed="My personal digital garden, built with Rust + HTMX""##,
+        r##"value="#abcdef" data-color="accent" data-reset="styles" data-deployed="#bc6c25""##,
+        r##"value="Lora" list="font-catalog" data-font-role="body" data-reset="styles" data-deployed="keep""##,
+        r##"name="body_weight" data-font-role="body" data-reset="styles" data-deployed="600""##,
+        r##"name="body_fallback" data-font-role="body" data-reset="styles" data-deployed="sans-serif""##,
+        r##"name="feature_chess" data-reset="details" data-deployed="true""##,
+    ] {
+        assert!(page.contains(fragment), "{fragment}");
+    }
+    assert!(page.contains(r#"data-deployed="GITHUB https://www.github.com/Chemchu"#));
+}

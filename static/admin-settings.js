@@ -1,14 +1,17 @@
 (function () {
   const root = document.documentElement;
 
-  function clearPreview() {
-    if (document.getElementById("settings-form")) {
-      return;
-    }
+  function clearStylePreview() {
     for (const property of Array.from(root.style)) {
       if (property.startsWith("--color-") || property.startsWith("--font-")) {
         root.style.removeProperty(property);
       }
+    }
+  }
+
+  function clearPreview() {
+    if (!document.getElementById("settings-form")) {
+      clearStylePreview();
     }
   }
 
@@ -91,6 +94,24 @@
 
   form.querySelectorAll("[data-font-role]").forEach((input) => {
     input.addEventListener("change", () => previewFont(input.dataset.fontRole));
+  });
+
+  function reset(group) {
+    form.querySelectorAll(`[data-reset="${group}"]`).forEach((input) => {
+      if (input.type === "checkbox") {
+        input.checked = input.dataset.deployed === "true";
+      } else {
+        input.value = input.dataset.deployed;
+      }
+    });
+    if (group === "styles") {
+      clearStylePreview();
+      ["body", "heading"].forEach(previewFont);
+    }
+  }
+
+  form.querySelectorAll("[data-reset-group]").forEach((button) => {
+    button.addEventListener("click", () => reset(button.dataset.resetGroup));
   });
 
   ["body", "heading"].forEach(previewFont);
