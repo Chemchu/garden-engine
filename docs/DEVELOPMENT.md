@@ -3,8 +3,11 @@
 So, what you have running right now is an [actix web](https://actix.rs/) process
 serving some static HTML with a bit of JS. It spins up a
 [SurrealDB](https://surrealdb.com/) in-memory instance in which we store all of
-the posts (and other stuff). The posts are inside the [/garden](../garden)
-directory. We do all sort of operations with those documents like creating
+the posts (and other stuff). The posts come from the `garden/` folder of the
+content directory (`CONTENT_DIR`): the starter's demo garden when you develop
+here, and a content repository like
+[Chemchu/garden](https://github.com/Chemchu/garden) in production. We do all
+sort of operations with those documents like creating
 relationships between posts, creating a full-search engine utility crate
 (relying on surrealdb tbh) and more stuff I can't remember right now.
 
@@ -35,8 +38,9 @@ them doesn't need a CSS rebuild.
   sets. Anywhere else the header is ignored and the connection's address is
   used, so it can't be faked.
 - The site never holds a GitHub token. Settings travel as a GitHub issue that
-  you submit yourself, and the `site-settings` workflow turns it into a pull
-  request using the workflow's own token.
+  you submit yourself in the content repository (the one `REPO_SOURCE` points
+  at). Its `site-settings` workflow runs `/app/site-settings` from the engine
+  image and turns the issue into a pull request using the workflow's own token.
 
 ## Crates
 

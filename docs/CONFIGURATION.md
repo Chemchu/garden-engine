@@ -17,14 +17,14 @@ Locally, put them in a `.env` file (see `.env.example`).
 
 ## site.toml
 
-This is the file the admin page edits through pull requests. You can also edit
-it by hand. The server checks it when it starts and refuses to run with an
+It lives at the root of your content repository, next to `garden/`. The admin
+page edits it through pull requests, and you can also edit it by hand. The server checks it when it starts and refuses to run with an
 invalid value, so a typo can't break the live site silently.
 
 ```toml
 [site]
 name = "My digital garden"
-source_url = "https://github.com/<you>/<your-fork>"
+source_url = "https://github.com/Chemchu/guslee"
 
 [site.description]
 en = "My digital garden"
