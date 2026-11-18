@@ -664,10 +664,12 @@ fn catalog_json(fonts: &[CatalogFont]) -> String {
 mod tests {
     use super::*;
     use crate::i18n::Locale;
-    use crate::site_config::{DEFAULT_SITE_CONFIG_PATH, STATIC_DIR};
+    use crate::site_config::STATIC_DIR;
+
+    const SITE_CONFIG_PATH: &str = "crates/e2e/fixtures/site.toml";
 
     fn site() -> SiteConfig {
-        SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).unwrap()
+        SiteConfig::load(SITE_CONFIG_PATH, STATIC_DIR).unwrap()
     }
 
     fn form(feature_chess: Option<&str>) -> SettingsForm {

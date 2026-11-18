@@ -244,7 +244,7 @@ mod tests {
 
     fn site() -> SiteConfig {
         SiteConfig::load(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/../../site.toml"),
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../e2e/fixtures/site.toml"),
             concat!(env!("CARGO_MANIFEST_DIR"), "/../../static"),
         )
         .unwrap()

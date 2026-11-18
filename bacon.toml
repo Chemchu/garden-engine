@@ -116,7 +116,7 @@ allow_warnings = true
 background = true
 on_change_strategy = "kill_then_restart"
 kill = ["sh", "-c", "killall -9 surreal guslee"]
-watch = ["src", "templates", "garden", "crates", "static"]  # Explicitly watch these paths
+watch = ["src", "templates", "starter", "crates", "static"]  # Explicitly watch these paths
 ignore = ["static/compiled.css"]
 
 # You may define here keybindings that would be specific to

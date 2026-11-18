@@ -1,10 +1,8 @@
-use e2e::TestApp;
-
-const STARTER_GARDEN: &str = "starter/garden";
+use e2e::{STARTER_GARDEN_PATH, TestApp};
 
 #[tokio::test]
 async fn the_starter_garden_renders_with_every_link_resolved() {
-    let app = TestApp::spawn_with_garden(STARTER_GARDEN).await;
+    let app = TestApp::spawn_with_garden(STARTER_GARDEN_PATH).await;
 
     let home = app.get("/").await;
     assert_eq!(home.status, 200);

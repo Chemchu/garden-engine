@@ -5,7 +5,7 @@ use actix_web::{HttpServer, web};
 use admin_module::{AdminCredentials, AdminStore, FontCatalog};
 use guslee::controllers::{AppState, Integrations, admin_controller::AdminAuth};
 use guslee::settings::GithubRepo;
-use guslee::site_config::{DEFAULT_SITE_CONFIG_PATH, Features, STATIC_DIR, SiteConfig};
+use guslee::site_config::{Features, STATIC_DIR, SiteConfig};
 use search_engine::PostsSearchEngine;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use wiremock::MockServer;
@@ -24,7 +24,8 @@ pub const ADMIN_PASSWORD: &str = "a long and correct passphrase";
 pub const ADMIN_SECRET_KEY: &str = "e2e-secret-key-with-at-least-32-bytes";
 
 pub const GARDEN_PATH: &str = "crates/e2e/fixtures/garden";
-pub const REAL_GARDEN_PATH: &str = "garden";
+pub const SITE_CONFIG_PATH: &str = "crates/e2e/fixtures/site.toml";
+pub const STARTER_GARDEN_PATH: &str = "starter/garden";
 
 pub struct TestApp {
     pub address: String,
@@ -136,7 +137,7 @@ impl TestApp {
 
         let mut site = SiteConfig {
             features,
-            ..SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).expect("valid site.toml")
+            ..SiteConfig::load(SITE_CONFIG_PATH, STATIC_DIR).expect("valid site.toml")
         };
         site.identity.name = APP_NAME.to_string();
 

@@ -521,11 +521,13 @@ pub fn render_not_found(app_state: &AppState, req: &HttpRequest) -> HttpResponse
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::site_config::{DEFAULT_SITE_CONFIG_PATH, STATIC_DIR};
+    use crate::site_config::STATIC_DIR;
+
+    const SITE_CONFIG_PATH: &str = "crates/e2e/fixtures/site.toml";
     use actix_web::test::TestRequest;
 
     fn site() -> SiteConfig {
-        SiteConfig::load(DEFAULT_SITE_CONFIG_PATH, STATIC_DIR).unwrap()
+        SiteConfig::load(SITE_CONFIG_PATH, STATIC_DIR).unwrap()
     }
 
     fn site_with(features: Features) -> SiteConfig {

@@ -10,7 +10,7 @@ COPY --from=planner /usr/src/app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json --bin guslee --bin site-settings
 COPY . .
 RUN cargo build --release --bin guslee --bin site-settings
-RUN cd garden && git log --format=%x00%cs --name-only --relative -- . > ../garden-dates.txt || true
+RUN cd starter/garden && git log --format=%x00%cs --name-only --relative -- . > ../../garden-dates.txt || true
 
 # Runtime image - same base as builder
 FROM debian:trixie-slim
@@ -26,8 +26,9 @@ COPY --from=builder /usr/src/app/target/release/guslee ./guslee
 COPY --from=builder /usr/src/app/target/release/site-settings ./site-settings
 COPY --from=builder /usr/src/app/static ./static
 COPY --from=builder /usr/src/app/templates ./templates
-COPY --from=builder /usr/src/app/garden ./content/garden
-COPY --from=builder /usr/src/app/site.toml ./content/site.toml
+COPY --from=builder /usr/src/app/starter/garden ./content/garden
+COPY --from=builder /usr/src/app/starter/site.toml ./content/site.toml
+COPY --from=builder /usr/src/app/starter/assets ./content/assets
 COPY --from=builder /usr/src/app/garden-dates.txt ./content/garden-dates.txt
 
 ENV TEMPLATE_PATH=/app/templates

@@ -159,7 +159,7 @@ mod tests {
 
     fn content_repo() -> tempfile::TempDir {
         let dir = tempfile::tempdir().unwrap();
-        let site = fs::read_to_string(crate::site_config::DEFAULT_SITE_CONFIG_PATH).unwrap();
+        let site = fs::read_to_string("crates/e2e/fixtures/site.toml").unwrap();
         write(&dir.path().join("site.toml"), &site);
         write(
             &dir.path().join("garden/welcome.md"),

@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 
 pub mod settings;
 
-pub const DEFAULT_SITE_CONFIG_PATH: &str = "./site.toml";
 pub const STATIC_DIR: &str = "./static";
 const STATIC_URL_PREFIX: &str = "/_static";
 const FONTS_DIR: &str = "fonts";
@@ -524,7 +523,9 @@ fn is_unicode_range(value: &str) -> bool {
 mod tests {
     use super::*;
 
-    const REPO_SITE_CONFIG: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../site.toml");
+    const FIXTURE_SITE_CONFIG: &str =
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../e2e/fixtures/site.toml");
+    const STARTER: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../starter");
     const REPO_STATIC_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../static");
 
     const VALID: &str = r##"
@@ -581,8 +582,15 @@ src = "fonts/tusker-grotesk/regular.woff2"
 
     #[test]
     fn the_committed_site_config_is_valid_and_its_fonts_exist() {
-        let config = SiteConfig::load(REPO_SITE_CONFIG, REPO_STATIC_DIR);
+        let config = SiteConfig::load(FIXTURE_SITE_CONFIG, REPO_STATIC_DIR);
         assert!(config.is_ok(), "{}", config.unwrap_err());
+
+        let starter_assets = format!("{STARTER}/assets");
+        let starter = SiteConfig::load_with_assets(
+            format!("{STARTER}/site.toml"),
+            &[Path::new(&starter_assets)],
+        );
+        assert!(starter.is_ok(), "{}", starter.unwrap_err());
     }
 
     #[test]
