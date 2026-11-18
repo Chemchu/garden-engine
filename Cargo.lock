@@ -1511,7 +1511,7 @@ dependencies = [
  "admin-module",
  "chess-module",
  "games-module",
- "guslee",
+ "garden-engine",
  "music-module",
  "reqwest 0.13.5",
  "search-engine",
@@ -1874,6 +1874,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "garden-engine"
+version = "0.1.0"
+dependencies = [
+ "actix-files",
+ "actix-session",
+ "actix-web",
+ "admin-module",
+ "cached",
+ "chess-module",
+ "chrono",
+ "dotenvy",
+ "games-module",
+ "log",
+ "markdown",
+ "maud",
+ "music-module",
+ "search-engine",
+ "serde",
+ "serde_json",
+ "simple_logger",
+ "site-config",
+ "surrealdb",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.12.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2025,33 +2052,6 @@ dependencies = [
  "ff",
  "rand_core 0.6.4",
  "subtle",
-]
-
-[[package]]
-name = "guslee"
-version = "0.1.0"
-dependencies = [
- "actix-files",
- "actix-session",
- "actix-web",
- "admin-module",
- "cached",
- "chess-module",
- "chrono",
- "dotenvy",
- "games-module",
- "log",
- "markdown",
- "maud",
- "music-module",
- "search-engine",
- "serde",
- "serde_json",
- "simple_logger",
- "site-config",
- "surrealdb",
- "tempfile",
- "tokio",
 ]
 
 [[package]]

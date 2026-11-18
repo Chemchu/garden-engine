@@ -1,5 +1,5 @@
 use e2e::{ADMIN_PASSWORD, ADMIN_USERNAME, TestApp};
-use guslee::controllers::admin_controller::{MAX_ATTEMPTS_PER_CLIENT, SESSION_COOKIE};
+use garden_engine::controllers::admin_controller::{MAX_ATTEMPTS_PER_CLIENT, SESSION_COOKIE};
 use reqwest::{Client, StatusCode, header, redirect::Policy};
 
 struct Browser {

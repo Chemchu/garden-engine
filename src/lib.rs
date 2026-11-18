@@ -67,11 +67,6 @@ pub fn create_app(
                 controllers::music_controller::configure_services(cfg, spotify)
             }
         })
-        .configure(|cfg| {
-            if features.schedule {
-                controllers::routines_controller::configure_services(cfg)
-            }
-        })
         .configure(controllers::tags_controller::configure_services)
         .configure(controllers::feed_controller::configure_services)
         .configure(|cfg| {

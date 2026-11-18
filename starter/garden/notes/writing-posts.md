@@ -31,7 +31,7 @@ tags:
 ```
 
 `title`, `date`, `description` and `tags` are required; `topic` is optional.
-A post without valid front matter is left out of the site, and `guslee check`
+A post without valid front matter is left out of the site, and `garden-engine check`
 tells you which one and why.
 
 ## Tags

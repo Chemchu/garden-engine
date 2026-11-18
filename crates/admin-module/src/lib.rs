@@ -18,9 +18,9 @@ pub const MAX_CREDENTIAL_BYTES: usize = 1024;
 pub const MAX_CONCURRENT_VERIFICATIONS: usize = 2;
 
 const DB_ENDPOINT: &str = "mem://";
-const PEPPER_LABEL: &[u8] = b"guslee/admin/password-pepper";
-const USERNAME_LABEL: &[u8] = b"guslee/admin/username";
-const SESSION_LABEL: &[u8] = b"guslee/admin/session-cookie";
+const PEPPER_LABEL: &[u8] = b"garden-engine/admin/password-pepper";
+const USERNAME_LABEL: &[u8] = b"garden-engine/admin/username";
+const SESSION_LABEL: &[u8] = b"garden-engine/admin/session-cookie";
 const SCHEMA: &str = "
     DEFINE TABLE admin SCHEMAFULL PERMISSIONS NONE;
     DEFINE FIELD username_digest ON admin TYPE string;
@@ -104,7 +104,7 @@ impl AdminStore {
         let dummy_hash = hash_password(pepper, &hex::encode(derive_key(secret, b"dummy")))?;
 
         let db = connect(DB_ENDPOINT).await?;
-        db.use_ns("guslee").use_db("admin").await?;
+        db.use_ns("garden_engine").use_db("admin").await?;
         db.query(SCHEMA).await?.check()?;
 
         let store = AdminStore {

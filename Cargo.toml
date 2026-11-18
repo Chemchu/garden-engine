@@ -20,7 +20,7 @@ surrealdb = { version = "3.3.4", features = ["kv-mem", "protocol-ws"], default-f
 tempfile = "3.27.0"
 
 [package]
-name = "guslee"
+name = "garden-engine"
 version = "0.1.0"
 edition = "2024"
 

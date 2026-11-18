@@ -115,7 +115,7 @@ need_stdout = true
 allow_warnings = true
 background = true
 on_change_strategy = "kill_then_restart"
-kill = ["sh", "-c", "killall -9 surreal guslee"]
+kill = ["sh", "-c", "killall -9 surreal garden-engine"]
 watch = ["src", "templates", "starter", "crates", "static"]  # Explicitly watch these paths
 ignore = ["static/compiled.css"]
 

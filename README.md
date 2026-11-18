@@ -1,4 +1,4 @@
-# guslee
+# garden-engine
 
 A digital garden engine. Point it at a folder of Markdown notes and a
 `site.toml`, and it serves them as a site:
@@ -41,6 +41,6 @@ The site is up at [http://localhost:3000](http://localhost:3000/).
 - [Make it yours](docs/FORKING.md): running your own garden from the starter
   kit
 - [Configuration](docs/CONFIGURATION.md): environment variables, `site.toml`
-  and `guslee check`
+  and `garden-engine check`
 - [How it works](docs/DEVELOPMENT.md): architecture, the admin page, crates,
   tests, releases and the starter kit

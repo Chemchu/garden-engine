@@ -424,10 +424,11 @@ mod tests {
     #[test]
     fn github_repositories_are_read_from_the_repo_source() {
         let repo =
-            GithubRepo::from_repo_source("https://github.com/Chemchu/guslee/blob/main").unwrap();
+            GithubRepo::from_repo_source("https://github.com/Chemchu/garden-engine/blob/main")
+                .unwrap();
         assert_eq!(repo.owner, "Chemchu");
-        assert_eq!(repo.name, "guslee");
-        assert_eq!(repo.url(), "https://github.com/Chemchu/guslee");
+        assert_eq!(repo.name, "garden-engine");
+        assert_eq!(repo.url(), "https://github.com/Chemchu/garden-engine");
 
         assert_eq!(
             GithubRepo::from_repo_source("https://github.com/some-one/my.garden.git")

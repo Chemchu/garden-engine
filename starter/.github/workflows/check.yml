@@ -24,4 +24,4 @@ jobs:
         run: docker build -t site .
 
       - name: Check the content
-        run: docker run --rm site ./guslee check
+        run: docker run --rm site ./garden-engine check

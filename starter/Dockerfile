@@ -1,4 +1,4 @@
-FROM ghcr.io/chemchu/guslee:1.0.0
+FROM ghcr.io/chemchu/garden-engine:1.0.0
 
 COPY --chown=app:app garden /app/site/garden
 COPY --chown=app:app assets /app/site/assets

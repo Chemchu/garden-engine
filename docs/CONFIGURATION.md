@@ -24,7 +24,7 @@ invalid value, so a typo can't break the live site silently.
 ```toml
 [site]
 name = "My digital garden"
-source_url = "https://github.com/Chemchu/guslee"
+source_url = "https://github.com/Chemchu/garden-engine"
 
 [site.description]
 en = "My digital garden"
@@ -66,7 +66,6 @@ news = true
 chess = false
 music = false
 games = false
-schedule = false
 ```
 
 Font files live in `fonts/<font>/` inside your assets folder, or in the
@@ -78,7 +77,7 @@ example) come as a single file of about 1 MB per weight.
 
 ## Checking your content
 
-`guslee check` validates a content folder without starting the server:
+`garden-engine check` validates a content folder without starting the server:
 
 ```sh
 cargo run -- check                     # the current CONTENT_DIR

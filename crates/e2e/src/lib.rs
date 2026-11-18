@@ -3,9 +3,9 @@ use std::sync::{Arc, OnceLock};
 
 use actix_web::{HttpServer, web};
 use admin_module::{AdminCredentials, AdminStore, FontCatalog};
-use guslee::controllers::{AppState, Integrations, admin_controller::AdminAuth};
-use guslee::settings::GithubRepo;
-use guslee::site_config::{Features, STATIC_DIR, SiteConfig};
+use garden_engine::controllers::{AppState, Integrations, admin_controller::AdminAuth};
+use garden_engine::settings::GithubRepo;
+use garden_engine::site_config::{Features, STATIC_DIR, SiteConfig};
 use search_engine::PostsSearchEngine;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use wiremock::MockServer;
@@ -184,7 +184,7 @@ impl TestApp {
         }
         let app_state = web::Data::new(app_state);
 
-        let server = HttpServer::new(move || guslee::create_app(app_state.clone()))
+        let server = HttpServer::new(move || garden_engine::create_app(app_state.clone()))
             .workers(1)
             .bind(("127.0.0.1", 0))
             .expect("bind random port");

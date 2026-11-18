@@ -46,7 +46,7 @@ them doesn't need a CSS rebuild.
 
 | Crate                  | What it does                                              |
 | ---------------------- | --------------------------------------------------------- |
-| `guslee` (root)        | The web server                                            |
+| `garden-engine` (root) | The web server                                            |
 | `crates/search-engine` | Loads the garden into SurrealDB, search, links and graph  |
 | `crates/site-config`   | `site.toml` and settings requests: parsing and validation |
 | `crates/site-settings` | The tool the settings workflow runs to apply a request    |
@@ -66,7 +66,7 @@ cargo test -p e2e        # end-to-end only
 - Unit tests live next to the code in each crate. The search engine also has
   integration tests (`crates/search-engine/tests`) that run against an embedded
   in-memory SurrealDB, so no `surreal` server is needed.
-- `crates/e2e` boots the real app (`guslee::create_app`) on a random port
+- `crates/e2e` boots the real app (`garden_engine::create_app`) on a random port
   against the fixture garden in `crates/e2e/fixtures/garden`, with Lichess,
   Spotify, Steam and the font catalog replaced by local mock servers. No
   credentials or network access needed.
@@ -85,7 +85,7 @@ git push origin v1.0.0
 ```
 
 The `Publish image` workflow builds the Dockerfile and checks the bundled content
-with `guslee check`. Only then does it push `ghcr.io/<owner>/guslee` as `1.0.0`,
+with `garden-engine check`. Only then does it push `ghcr.io/<owner>/garden-engine` as `1.0.0`,
 `1.0` and `1`. Tag a commit on `main` whose CI already passed. Use `v1.0.0` or
 later: the `1` tag isn't created for `0.x` versions.
 
@@ -93,7 +93,7 @@ The image contains:
 
 | Path                 | What                                                  |
 | -------------------- | ----------------------------------------------------- |
-| `/app/guslee`        | The server, and `guslee check` for content            |
+| `/app/garden-engine` | The server, and `garden-engine check` for content     |
 | `/app/site-settings` | The tool the settings workflow runs                   |
 | `/app/static`        | Engine scripts, styles and default fonts              |
 | `/app/templates`     | Page templates                                        |
@@ -118,7 +118,7 @@ package's settings on GitHub so anyone can pull it.
 
 It's tested here:
 
-- `the_starter_kit_is_clean` runs `guslee check` on it and expects no problems
+- `the_starter_kit_is_clean` runs `garden-engine check` on it and expects no problems
   and no warnings;
 - `crates/e2e/tests/starter.rs` renders its posts and checks that every link
   resolves;

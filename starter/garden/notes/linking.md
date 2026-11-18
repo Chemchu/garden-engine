@@ -26,4 +26,4 @@ Links are what turn a folder of notes into a garden.
 Every link shows up as a backlink on the page it points to, and in the graph.
 
 A link to a note that doesn't exist yet is shown as unresolved, and
-`guslee check` lists it as a warning so you can write it later.
+`garden-engine check` lists it as a warning so you can write it later.

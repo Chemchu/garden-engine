@@ -7,7 +7,7 @@ use crate::site_config::{STATIC_DIR, SiteConfig, SiteConfigError};
 
 pub const SITE_CONFIG_FILE: &str = "site.toml";
 pub const ASSETS_FOLDER: &str = "assets";
-pub const CHECK_USAGE: &str = "usage: guslee check [CONTENT_DIR] [--assets ASSETS_DIR]";
+pub const CHECK_USAGE: &str = "usage: garden-engine check [CONTENT_DIR] [--assets ASSETS_DIR]";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContentPaths {

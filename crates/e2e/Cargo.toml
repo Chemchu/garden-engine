@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-guslee = { path = "../.." }
+garden-engine = { path = "../.." }
 search-engine = { path = "../search-engine" }
 chess-module = { path = "../chess-module" }
 music-module = { path = "../music-module" }

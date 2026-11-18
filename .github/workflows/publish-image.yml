@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
 
       - name: Name the image
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/garden-engine" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -33,14 +33,14 @@ jobs:
         with:
           context: .
           load: true
-          tags: guslee:candidate
+          tags: garden-engine:candidate
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Smoke test the image
         run: |
-          docker run --rm guslee:candidate test -x ./site-settings
-          docker run --rm guslee:candidate ./guslee check
+          docker run --rm garden-engine:candidate test -x ./site-settings
+          docker run --rm garden-engine:candidate ./garden-engine check
 
       - name: Choose the tags
         id: meta
@@ -52,7 +52,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
           labels: |
-            org.opencontainers.image.title=guslee
+            org.opencontainers.image.title=garden-engine
             org.opencontainers.image.description=A digital garden engine: point it at a folder of Markdown posts and a site.toml
 
       - name: Log in to GitHub Container Registry

@@ -127,7 +127,10 @@ impl PostsSearchEngine {
 
         let db = connect(db_endpoint).await.unwrap();
 
-        db.use_ns("guslee").use_db("guslee").await.unwrap();
+        db.use_ns("garden_engine")
+            .use_db("garden_engine")
+            .await
+            .unwrap();
         db.query(
             "REMOVE TABLE IF EXISTS posts;
             REMOVE TABLE IF EXISTS points_to;

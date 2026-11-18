@@ -23,7 +23,7 @@ use crate::controllers::{AppState, render_page};
 use crate::i18n::{Locale, Texts};
 use crate::settings::GithubRepo;
 
-pub const SESSION_COOKIE: &str = "guslee_admin";
+pub const SESSION_COOKIE: &str = "garden_engine_admin";
 pub const SESSION_TTL_SECS: i64 = 4 * 60 * 60;
 pub const MAX_ATTEMPTS_PER_CLIENT: u32 = 5;
 pub const MAX_ATTEMPTS_OVERALL: u32 = 50;

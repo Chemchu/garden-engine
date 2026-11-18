@@ -7,7 +7,7 @@ or touch Rust.
 | Repository             | Holds                                                       | Its CI                                                                           |
 | ---------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | Yours, from `starter/` | `garden/`, `site.toml`, `assets/`, `Dockerfile`, `fly.toml` | Checks content on pull requests, deploys pushes to `main`, applies site settings |
-| This one (the engine)  | The server, templates, scripts and styles                   | Tests, and publishes `ghcr.io/chemchu/guslee` on version tags                    |
+| This one (the engine)  | The server, templates, scripts and styles                   | Tests, and publishes `ghcr.io/chemchu/garden-engine` on version tags             |
 
 Your `Dockerfile` starts `FROM` an exact engine version and copies your content
 into it. Deploying builds that image and ships it to Fly.io, so what you check
@@ -21,23 +21,18 @@ up the admin account, let the workflows open pull requests and push.
 
 ## Sections
 
-| Section    | What it shows                       | Needs                 |
-| ---------- | ----------------------------------- | --------------------- |
-| `news`     | Latest posts                        | nothing               |
-| `chess`    | Lichess stats and games             | `LICHESS_*` variables |
-| `music`    | Spotify top artists and tracks      | `SPOTIFY_*` variables |
-| `games`    | Steam profile and most played games | `STEAM_*` variables   |
-| `schedule` | "What I'm doing now" in the header  | nothing (see below)   |
+| Section | What it shows                       | Needs                 |
+| ------- | ----------------------------------- | --------------------- |
+| `news`  | Latest posts                        | nothing               |
+| `chess` | Lichess stats and games             | `LICHESS_*` variables |
+| `music` | Spotify top artists and tracks      | `SPOTIFY_*` variables |
+| `games` | Steam profile and most played games | `STEAM_*` variables   |
 
 Set the variables with `fly secrets set` (see
 [Environment variables](CONFIGURATION.md#environment-variables)) and switch the
 section on from the admin page. A section that is switched on but has no
 credentials stays hidden: the logs say which variable is missing and the admin
 page marks it as inactive.
-
-The schedule texts are mine and live in the engine (`src/i18n/en.rs` and
-`src/i18n/es.rs`), so a content repository can't change them. The starter
-leaves the section off.
 
 ## The admin page
 
@@ -77,10 +72,10 @@ page. The starter's two guide notes explain the rest:
 - translations;
 - wikilinks, links to headings and embeds.
 
-Run `guslee check` inside your site image to catch problems before you push:
+Run `garden-engine check` inside your site image to catch problems before you push:
 
 ```sh
-docker build -t my-garden . && docker run --rm my-garden ./guslee check
+docker build -t my-garden . && docker run --rm my-garden ./garden-engine check
 ```
 
 ## Upgrading the engine

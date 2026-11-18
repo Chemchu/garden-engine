@@ -1,7 +1,7 @@
 # My digital garden
 
 A digital garden made of Markdown notes, running on the
-[guslee](https://github.com/Chemchu/guslee) engine. This repository only holds
+[garden-engine](https://github.com/Chemchu/garden-engine) engine. This repository only holds
 the content: the posts, the site settings and a few assets. The engine arrives
 as a ready-made image, so there's nothing to compile.
 
@@ -57,7 +57,7 @@ front matter, tags, drafts, translations and links, and are meant to be
 replaced by your own notes.
 
 Every pull request runs the Check workflow. It builds the site and runs
-`guslee check`, which fails on posts the site would skip and warns about links
+`garden-engine check`, which fails on posts the site would skip and warns about links
 that go nowhere. Every push to `main` checks the content again and deploys it.
 
 ## Changing the look
@@ -75,7 +75,7 @@ precedence over the engine's.
 The chess, music and games pages need accounts on Lichess, Spotify and Steam.
 Set their variables with `fly secrets set` and switch the sections on from
 `/admin`. Sections without their variables stay hidden. The engine's
-[configuration guide](https://github.com/Chemchu/guslee/blob/main/docs/CONFIGURATION.md)
+[configuration guide](https://github.com/Chemchu/garden-engine/blob/main/docs/CONFIGURATION.md)
 lists every variable.
 
 ## Previewing locally
@@ -84,7 +84,7 @@ With Docker installed:
 
 ```sh
 docker build -t my-garden .
-docker run --rm my-garden ./guslee check
+docker run --rm my-garden ./garden-engine check
 docker run --rm -p 3000:3000 \
   -e REPO_SOURCE=https://github.com/<you>/<your-repo>/blob/main \
   my-garden

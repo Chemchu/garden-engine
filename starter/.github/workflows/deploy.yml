@@ -29,7 +29,7 @@ jobs:
         run: docker build -t site .
 
       - name: Check the content
-        run: docker run --rm site ./guslee check
+        run: docker run --rm site ./garden-engine check
 
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@1.5

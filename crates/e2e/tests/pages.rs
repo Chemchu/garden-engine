@@ -264,13 +264,13 @@ async fn metadata_panel_shows_frontmatter_and_source_link() {
 }
 
 #[tokio::test]
-async fn schedule_returns_an_activity() {
+async fn there_is_no_schedule() {
     let app = TestApp::spawn().await;
 
     let response = app.htmx_get("/schedule").await;
 
-    assert_eq!(response.status, 200);
-    assert!(response.body.starts_with("<span class=\"italic\">"));
+    assert_eq!(response.status, 404);
+    assert!(!app.get("/").await.body.contains("/schedule"));
 }
 
 #[tokio::test]

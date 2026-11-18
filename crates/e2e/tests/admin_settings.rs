@@ -1,11 +1,14 @@
 use e2e::{ADMIN_PASSWORD, ADMIN_USERNAME, TestApp, mocks};
-use guslee::settings::{FontRequest, SettingsRequest};
-use guslee::site_config::FontFallback;
+use garden_engine::settings::{FontRequest, SettingsRequest};
+use garden_engine::site_config::FontFallback;
 use reqwest::{Client, StatusCode, Url, header, redirect::Policy};
 
 const CURRENT: [(&str, &str); 21] = [
     ("site_name", "E2E garden"),
-    ("site_source_url", "https://github.com/Chemchu/guslee"),
+    (
+        "site_source_url",
+        "https://github.com/Chemchu/garden-engine",
+    ),
     (
         "description_en",
         "My personal digital garden, built with Rust + HTMX",
@@ -100,9 +103,6 @@ impl Admin {
                 .iter()
                 .filter(|(name, _)| !CURRENT.iter().any(|(current, _)| current == name)),
         );
-        if !removed.contains(&"feature_schedule") {
-            form.push(("feature_schedule", "on"));
-        }
         self.post("/admin/settings", &form).await
     }
 }
@@ -192,7 +192,7 @@ async fn changes_are_sent_to_github_as_an_issue() {
         }
     );
     assert!(!request.features.chess);
-    assert!(request.features.news && request.features.schedule);
+    assert!(request.features.news && request.features.music);
     assert_eq!(request.identity.name, "E2E garden");
     assert_eq!(request.identity.links.len(), 2);
 }

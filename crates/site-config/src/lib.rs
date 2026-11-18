@@ -124,17 +124,15 @@ pub struct Features {
     pub chess: bool,
     pub music: bool,
     pub games: bool,
-    pub schedule: bool,
 }
 
 impl Features {
-    pub fn entries(&self) -> [(&'static str, bool); 5] {
+    pub fn entries(&self) -> [(&'static str, bool); 4] {
         [
             ("news", self.news),
             ("chess", self.chess),
             ("music", self.music),
             ("games", self.games),
-            ("schedule", self.schedule),
         ]
     }
 }
@@ -146,7 +144,6 @@ impl Default for Features {
             chess: true,
             music: true,
             games: true,
-            schedule: true,
         }
     }
 }
@@ -596,12 +593,12 @@ src = "fonts/tusker-grotesk/regular.woff2"
     #[test]
     fn features_default_to_enabled_and_can_be_switched_off() {
         assert_eq!(valid().features, Features::default());
-        assert!(Features::default().chess && Features::default().schedule);
+        assert!(Features::default().chess && Features::default().games);
 
-        let raw = format!("{VALID}\n[features]\nchess = false\nschedule = false\n");
+        let raw = format!("{VALID}\n[features]\nchess = false\ngames = false\n");
         let features = SiteConfig::parse(&raw).unwrap().features;
-        assert!(!features.chess && !features.schedule);
-        assert!(features.news && features.music && features.games);
+        assert!(!features.chess && !features.games);
+        assert!(features.news && features.music);
     }
 
     #[test]

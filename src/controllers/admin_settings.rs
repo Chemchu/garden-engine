@@ -43,7 +43,6 @@ pub struct SettingsForm {
     feature_chess: Option<String>,
     feature_music: Option<String>,
     feature_games: Option<String>,
-    feature_schedule: Option<String>,
 }
 
 impl SettingsForm {
@@ -90,7 +89,6 @@ impl SettingsForm {
                 chess: self.feature_chess.is_some(),
                 music: self.feature_music.is_some(),
                 games: self.feature_games.is_some(),
-                schedule: self.feature_schedule.is_some(),
             },
         }
     }
@@ -649,8 +647,7 @@ fn feature_label<'a>(t: &'a Texts, name: &str) -> &'a str {
         "news" => t.nav_news,
         "chess" => t.nav_chess,
         "music" => t.nav_music,
-        "games" => t.nav_games,
-        _ => t.admin_feature_schedule,
+        _ => t.nav_games,
     }
 }
 
@@ -696,7 +693,6 @@ mod tests {
             feature_chess: feature_chess.map(str::to_string),
             feature_music: Some("on".to_string()),
             feature_games: None,
-            feature_schedule: Some("on".to_string()),
         }
     }
 
@@ -731,7 +727,7 @@ mod tests {
         let values = form(None).into_values(&site());
 
         assert!(!values.features.chess && !values.features.games);
-        assert!(values.features.news && values.features.music && values.features.schedule);
+        assert!(values.features.news && values.features.music);
         assert!(form(Some("on")).into_values(&site()).features.chess);
         assert_eq!(values.body.value, "Inter");
         assert_eq!(values.colors.primary, "#ff0000");
@@ -786,9 +782,9 @@ mod tests {
             identity_section(&site.identity, &site.identity, Locale::En.texts()).into_string();
         assert!(html.contains(r#"name="description_en" value="My personal digital garden"#));
         assert!(html.contains(r#"name="description_es""#));
-        assert!(
-            html.contains(r#"name="site_source_url" value="https://github.com/Chemchu/guslee""#)
-        );
+        assert!(html.contains(
+            r#"name="site_source_url" value="https://github.com/Chemchu/garden-engine""#
+        ));
     }
 
     #[test]
@@ -814,10 +810,7 @@ mod tests {
             .iter()
             .map(|(name, _)| feature_label(t, name))
             .collect();
-        assert_eq!(
-            features,
-            vec!["NOVEDADES", "AJEDREZ", "MÚSICA", "JUEGOS", "Horario"]
-        );
+        assert_eq!(features, vec!["NOVEDADES", "AJEDREZ", "MÚSICA", "JUEGOS"]);
     }
 
     #[test]
