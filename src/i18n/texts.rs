@@ -165,6 +165,8 @@ texts! {
     admin_color_secondary,
     admin_color_accent,
     admin_color_shade,
+    admin_corners,
+    admin_radius,
     admin_fonts,
     admin_font_body,
     admin_font_heading,

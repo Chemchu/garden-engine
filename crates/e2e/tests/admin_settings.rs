@@ -345,6 +345,33 @@ async fn unknown_fonts_and_missing_weights_are_explained() {
 }
 
 #[tokio::test]
+async fn the_corner_radius_is_sent_with_the_request() {
+    let app = TestApp::spawn_with_admin().await;
+    mocks::mount_font_catalog(&app).await;
+    let admin = Admin::sign_in(&app).await;
+
+    let page = admin.settings_page().await;
+    assert!(page.contains(r#"name="radius" min="0" max="24" step="1" value="0""#));
+    assert!(page.contains(r#"<output id="radius-value" class="tabular-nums">0px</output>"#));
+
+    let rounder = admin.submit(&[("radius", "8")], &[]).await;
+    assert_eq!(requested_settings(&rounder).radius, Some(8));
+
+    let unchanged = admin.submit(&[("radius", "0")], &[]).await;
+    assert_eq!(unchanged.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+    let too_round = admin.submit(&[("radius", "25")], &[]).await;
+    assert_eq!(too_round.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(
+        too_round
+            .text()
+            .await
+            .unwrap()
+            .contains("radius must be between 0 and 24 pixels, got 25")
+    );
+}
+
+#[tokio::test]
 async fn invalid_colors_are_rejected() {
     let app = TestApp::spawn_with_admin().await;
     mocks::mount_font_catalog(&app).await;
@@ -425,6 +452,7 @@ async fn reset_buttons_bring_back_the_deployed_values_after_a_failed_submit() {
                 ("body_font", "Lora"),
                 ("body_weight", "700"),
                 ("body_fallback", "serif"),
+                ("radius", "12"),
             ],
             &["feature_chess"],
         )
@@ -442,6 +470,7 @@ async fn reset_buttons_bring_back_the_deployed_values_after_a_failed_submit() {
         r##"name="body_weight" data-font-role="body" data-reset="styles" data-deployed="600""##,
         r##"name="body_fallback" data-font-role="body" data-reset="styles" data-deployed="sans-serif""##,
         r##"name="feature_chess" data-reset="details" data-deployed="true""##,
+        r##"name="radius" min="0" max="24" step="1" value="12" data-radius data-reset="styles" data-deployed="0""##,
     ] {
         assert!(page.contains(fragment), "{fragment}");
     }

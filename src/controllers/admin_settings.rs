@@ -6,7 +6,9 @@ use crate::controllers::AppState;
 use crate::controllers::admin_controller::{AdminAuth, logout_form};
 use crate::i18n::{Locale, Texts, fill};
 use crate::settings::{FONTSOURCE_CDN_URL, FontRequest, FontRequests, SettingsRequest};
-use crate::site_config::{Colors, Features, Font, FontFallback, Identity, Link, SiteConfig};
+use crate::site_config::{
+    Colors, Features, Font, FontFallback, Identity, Link, MAX_RADIUS, SiteConfig,
+};
 
 pub const KEEP_FONT: &str = "keep";
 const WEIGHTS: [u16; 9] = [100, 200, 300, 400, 500, 600, 700, 800, 900];
@@ -30,6 +32,7 @@ pub struct SettingsForm {
     color_secondary: String,
     color_accent: String,
     color_shade: String,
+    radius: Option<u8>,
     body_font: String,
     body_weight: Option<u16>,
     body_fallback: FontFallback,
@@ -71,6 +74,7 @@ impl SettingsForm {
                 accent: self.color_accent,
                 shade: self.color_shade,
             },
+            radius: self.radius.unwrap_or(site.theme.radius),
             body: FontField {
                 value: self.body_font,
                 weight: self.body_weight,
@@ -96,6 +100,7 @@ impl SettingsForm {
 pub struct FormValues {
     pub identity: Identity,
     pub colors: Colors,
+    pub radius: u8,
     pub body: FontField,
     pub heading: FontField,
     pub features: Features,
@@ -123,6 +128,7 @@ impl FormValues {
         FormValues {
             identity: site.identity.clone(),
             colors: site.theme.colors.clone(),
+            radius: site.theme.radius,
             body: FontField::keeping(&site.theme.fonts.body),
             heading: FontField::keeping(&site.theme.fonts.heading),
             features: site.features,
@@ -165,7 +171,7 @@ async fn build_request(
     let heading = resolve(&values.heading, &site.theme.fonts.heading).await;
 
     let request = SettingsRequest {
-        radius: None,
+        radius: Some(values.radius),
         identity: values.identity.clone(),
         colors: values.colors.clone(),
         fonts: FontRequests { body, heading },
@@ -280,6 +286,25 @@ pub async fn render(
                                 span { (color_label(t, name)) }
                             }
                         }
+                    }
+                }
+
+                section class="flex flex-col gap-4" {
+                    h2 class="text-2xl" { (t.admin_corners) }
+                    label class="flex flex-wrap items-center gap-4" {
+                        span { (t.admin_radius) }
+                        input
+                        type="range"
+                        name="radius"
+                        min="0"
+                        max=(MAX_RADIUS)
+                        step="1"
+                        value=(values.radius)
+                        data-radius
+                        data-reset=(RESET_STYLES)
+                        data-deployed=(deployed.radius)
+                        class="w-48 accent-primary-color cursor-pointer";
+                        output id="radius-value" class="tabular-nums" { (values.radius) "px" }
                     }
                 }
 
@@ -528,6 +553,7 @@ mod tests {
             color_secondary: "#00ff00".to_string(),
             color_accent: "#0000ff".to_string(),
             color_shade: "#111111".to_string(),
+            radius: Some(10),
             body_font: "Inter".to_string(),
             body_weight: Some(600),
             body_fallback: FontFallback::SansSerif,
@@ -552,6 +578,20 @@ mod tests {
         assert_eq!(values.body.weight, Some(600));
         assert_eq!(values.heading.fallback, FontFallback::SansSerif);
         assert_eq!(values.features, site.features);
+        assert_eq!(values.radius, site.theme.radius);
+    }
+
+    #[test]
+    fn the_radius_comes_from_the_form_or_stays_as_it_is() {
+        let mut site = site();
+        site.theme.radius = 4;
+        assert_eq!(form(None).into_values(&site).radius, 10);
+
+        let without = SettingsForm {
+            radius: None,
+            ..form(None)
+        };
+        assert_eq!(without.into_values(&site).radius, 4);
     }
 
     #[test]

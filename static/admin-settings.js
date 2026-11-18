@@ -3,7 +3,11 @@
 
   function clearStylePreview() {
     for (const property of Array.from(root.style)) {
-      if (property.startsWith("--color-") || property.startsWith("--font-")) {
+      if (
+        property.startsWith("--color-") ||
+        property.startsWith("--font-") ||
+        property === "--radius-box"
+      ) {
         root.style.removeProperty(property);
       }
     }
@@ -92,6 +96,20 @@
     });
   });
 
+  const radius = form.querySelector("[data-radius]");
+  const radiusValue = document.getElementById("radius-value");
+
+  function showRadius() {
+    radiusValue.textContent = `${radius.value}px`;
+  }
+
+  function previewRadius() {
+    root.style.setProperty("--radius-box", `${radius.value}px`);
+    showRadius();
+  }
+
+  radius.addEventListener("input", previewRadius);
+
   form.querySelectorAll("[data-font-role]").forEach((input) => {
     input.addEventListener("change", () => previewFont(input.dataset.fontRole));
   });
@@ -106,6 +124,7 @@
     });
     if (group === "styles") {
       clearStylePreview();
+      showRadius();
       ["body", "heading"].forEach(previewFont);
     }
   }
@@ -114,5 +133,6 @@
     button.addEventListener("click", () => reset(button.dataset.resetGroup));
   });
 
+  previewRadius();
   ["body", "heading"].forEach(previewFont);
 })();

@@ -150,6 +150,8 @@ pub const TEXTS: Texts = Texts {
     admin_color_secondary: "Secondary",
     admin_color_accent: "Accent",
     admin_color_shade: "Borders and panels",
+    admin_corners: "Corners",
+    admin_radius: "Corner radius",
     admin_fonts: "Fonts",
     admin_font_body: "Body text",
     admin_font_heading: "Headings",
