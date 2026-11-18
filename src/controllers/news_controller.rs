@@ -82,7 +82,7 @@ async fn news_page(
                         @for post in news {
                         @let n = &post.metadata;
                         article
-                        class="group relative shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-shade-color"
+                        class="rounded-box group relative shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-shade-color"
                         {
                             a
                             class="block p-4 md:p-8"

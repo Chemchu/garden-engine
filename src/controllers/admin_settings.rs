@@ -14,8 +14,8 @@ const MAX_FONT_INPUT: usize = 100;
 const RESET_STYLES: &str = "styles";
 const RESET_DETAILS: &str = "details";
 const RESET_BUTTON_CLASS: &str =
-    "border border-shade-color px-3 py-1 cursor-pointer hover:border-primary-color";
-const INPUT_CLASS: &str = "border border-shade-color bg-background-color px-2 py-1 outline-none focus:border-primary-color";
+    "rounded-box border border-shade-color px-3 py-1 cursor-pointer hover:border-primary-color";
+const INPUT_CLASS: &str = "rounded-box border border-shade-color bg-background-color px-2 py-1 outline-none focus:border-primary-color";
 
 #[derive(Deserialize)]
 pub struct SettingsForm {
@@ -250,7 +250,7 @@ pub async fn render(
             }
 
             @if !problems.is_empty() {
-                div role="alert" class="border border-primary-color p-4" {
+                div role="alert" class="rounded-box border border-primary-color p-4" {
                     p { (t.admin_settings_errors) }
                     ul class="list-disc pl-6" {
                         @for problem in problems {
@@ -322,7 +322,7 @@ pub async fn render(
                     }
                 }
 
-                section class="flex flex-col gap-2 border border-shade-color p-4" {
+                section class="rounded-box flex flex-col gap-2 border border-shade-color p-4" {
                     h2 class="text-sm uppercase opacity-70" { (t.admin_preview) }
                     h3 class="text-3xl text-primary-color" { (t.admin_preview_heading) }
                     p { (t.admin_preview_body) }
@@ -345,7 +345,7 @@ pub async fn render(
                     p class="text-sm opacity-70" { (t.admin_submit_hint) }
                     button
                     type="submit"
-                    class="self-start border border-primary-color px-3 py-1 cursor-pointer hover:bg-primary-color hover:text-background-color"
+                    class="rounded-box self-start border border-primary-color px-3 py-1 cursor-pointer hover:bg-primary-color hover:text-background-color"
                     { (t.admin_submit) }
                 }
             }
@@ -438,7 +438,7 @@ fn font_fieldset(
     t: &Texts,
 ) -> Markup {
     html! {
-        fieldset class="flex flex-col gap-2 border border-shade-color p-4" {
+        fieldset class="rounded-box flex flex-col gap-2 border border-shade-color p-4" {
             legend class="px-1" { (label) }
             p class="text-sm opacity-70" { (fill(t.admin_font_current, &current.family)) }
             input

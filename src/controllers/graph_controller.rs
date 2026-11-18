@@ -63,7 +63,7 @@ async fn graph_network(
                     type="button"
                     data-graph-depth=(option)
                     aria-pressed=(option == depth)
-                    class="w-6 py-0.5 border border-shade-color bg-background-color/80 text-zinc-500 hover:text-bright-color aria-pressed:text-primary-color aria-pressed:border-primary-color transition-colors"
+                    class="rounded-box w-6 py-0.5 border border-shade-color bg-background-color/80 text-zinc-500 hover:text-bright-color aria-pressed:text-primary-color aria-pressed:border-primary-color transition-colors"
                     { (option) }
                 }
             }

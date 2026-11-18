@@ -815,7 +815,7 @@ fn post_page_shell(
                 hx-trigger="toggle once"
                 hx-target="#mobile-metadata-section"
                 hx-swap="innerHTML"
-                class="not-prose lg:hidden mb-6 border border-shade-color"
+                class="rounded-box not-prose lg:hidden mb-6 border border-shade-color"
                 {
                     summary
                     class="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-400"

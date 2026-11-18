@@ -132,7 +132,7 @@
       "fixed inset-0 z-50 flex items-start justify-center px-4 pt-[15vh] bg-black/50";
     overlay.innerHTML = `
       <div role="dialog" aria-modal="true" aria-label="Quick switcher"
-        class="flex flex-col w-full max-w-xl bg-background-color border border-shade-color shadow-2xl">
+        class="rounded-box flex flex-col w-full max-w-xl bg-background-color border border-shade-color shadow-2xl">
         <input type="text" role="combobox" aria-expanded="true" aria-autocomplete="list"
           aria-controls="quick-switcher-results" placeholder="Find a note..." autocomplete="off"
           class="w-full px-4 py-3 bg-transparent border-b border-shade-color focus:outline-hidden" />

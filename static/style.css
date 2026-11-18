@@ -13,6 +13,7 @@
   --color-secondary-color: #3f826d;
   --color-accent-color: #bc6c25;
   --color-shade-color: #323c49;
+  --radius-box: 0px;
 }
 
 @view-transition {

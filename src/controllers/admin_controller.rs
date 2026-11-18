@@ -297,7 +297,7 @@ async fn logout(session: Session, req: HttpRequest) -> HttpResponse {
 }
 
 fn login_content(t: &Texts, error: Option<&str>) -> String {
-    let input_class = "border border-shade-color bg-background-color px-2 py-1 outline-none focus:border-primary-color";
+    let input_class = "rounded-box border border-shade-color bg-background-color px-2 py-1 outline-none focus:border-primary-color";
 
     html! {
         div class="flex flex-col w-full max-w-sm gap-6 p-6 lg:p-8" {
@@ -328,7 +328,7 @@ fn login_content(t: &Texts, error: Option<&str>) -> String {
                 }
                 button
                 type="submit"
-                class="border border-primary-color px-3 py-1 cursor-pointer hover:bg-primary-color hover:text-background-color"
+                class="rounded-box border border-primary-color px-3 py-1 cursor-pointer hover:bg-primary-color hover:text-background-color"
                 { (t.admin_login_submit) }
             }
         }
@@ -341,7 +341,7 @@ pub(crate) fn logout_form(t: &Texts) -> maud::Markup {
         form method="post" action="/admin/logout" hx-boost="false" {
             button
             type="submit"
-            class="border border-primary-color px-3 py-1 cursor-pointer hover:bg-primary-color hover:text-background-color"
+            class="rounded-box border border-primary-color px-3 py-1 cursor-pointer hover:bg-primary-color hover:text-background-color"
             { (t.admin_logout) }
         }
     }

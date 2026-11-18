@@ -14,6 +14,9 @@ url = "https://www.github.com/Chemchu"
 label = "LINKEDIN"
 url = "https://www.linkedin.com/in/gustavo-lee"
 
+[theme]
+radius = 0
+
 [theme.colors]
 background = "#1e242c"
 bright = "#dbdfe5"

@@ -96,7 +96,7 @@ fn render_steam_page(
 
         div class="flex flex-col w-full gap-6 md:gap-10 p-4 md:p-6 lg:p-8 overflow-auto" {
             div class="flex flex-col gap-6" {
-                div class="bg-gradient-to-br from-slate-800 to-slate-900 shadow-2xl p-4 md:p-6 border border-shade-color" {
+                div class="rounded-box bg-gradient-to-br from-slate-800 to-slate-900 shadow-2xl p-4 md:p-6 border border-shade-color" {
                     div class="flex flex-col md:flex-row gap-6 items-start" {
                         div class="shrink-0" {
                             div class="relative" {
@@ -105,7 +105,7 @@ fn render_steam_page(
                                     img
                                         src=(profile.avatar_full)
                                         alt=(t.steam_avatar_alt)
-                                        class="transition-all duration-200 w-24 h-24 md:w-32 md:h-32 border-4 border-slate-700 shadow-xl hover:border-primary-color";
+                                        class="rounded-box transition-all duration-200 w-24 h-24 md:w-32 md:h-32 border-4 border-slate-700 shadow-xl hover:border-primary-color";
                                 }
                                 div
                                 class=(pfp_indicator_color)
@@ -157,7 +157,7 @@ fn render_steam_page(
             }
 
             div class="grid grid-cols-1 md:grid-cols-3 gap-4" {
-                div class="bg-gradient-to-br from-indigo-900/50 to-indigo-800/50 p-6 border border-shade-color shadow-lg" {
+                div class="rounded-box bg-gradient-to-br from-indigo-900/50 to-indigo-800/50 p-6 border border-shade-color shadow-lg" {
                     div class="flex items-center gap-3" {
                         div class="p-3 bg-indigo-500/20" {
                             svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
@@ -172,7 +172,7 @@ fn render_steam_page(
                 }
 
                 @if let Some(_created) = profile.timecreated {
-                    div class="bg-gradient-to-br from-emerald-900/50 to-emerald-800/50 p-6 border border-emerald-700/50 shadow-lg" {
+                    div class="rounded-box bg-gradient-to-br from-emerald-900/50 to-emerald-800/50 p-6 border border-emerald-700/50 shadow-lg" {
                         div class="flex items-center gap-3" {
                             div class="p-3 bg-emerald-500/20" {
                                 svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
@@ -196,7 +196,7 @@ fn render_steam_page(
                 }
 
                 @if let Some(country) = profile.loccountrycode {
-                    div class="bg-gradient-to-br from-amber-900/50 to-amber-800/50 p-6 border border-amber-700/50 shadow-lg" {
+                    div class="rounded-box bg-gradient-to-br from-amber-900/50 to-amber-800/50 p-6 border border-amber-700/50 shadow-lg" {
                         div class="flex items-center gap-3" {
                             div class="p-3 bg-amber-500/20" {
                                 svg class="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" {
@@ -223,13 +223,13 @@ fn render_steam_page(
 
                 div class="grid grid-cols-1 gap-4" {
                     @for game in &recent_games {
-                        div class="bg-gradient-to-r from-slate-800 to-slate-900 p-3 md:p-5 border border-slate-700 hover:border-primary-color transition-all duration-200 shadow-lg hover:shadow-xl" {
+                        div class="rounded-box bg-gradient-to-r from-slate-800 to-slate-900 p-3 md:p-5 border border-slate-700 hover:border-primary-color transition-all duration-200 shadow-lg hover:shadow-xl" {
                             div class="flex gap-4 items-center" {
                                 img
                                     src=(game.img_logo_url)
                                     onerror={"this.onerror=null; this.src='http://media.steampowered.com/steamcommunity/public/images/apps/"(game.appid)"/"(game.img_icon_url)".jpg';"}
                                     alt=(game.name)
-                                    class="w-12 h-12 md:w-16 md:h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
+                                    class="rounded-box w-12 h-12 md:w-16 md:h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
 
                                 div class="flex-1 min-w-0" {
                                     h3 class="text-lg md:text-xl font-bold text-white truncate mb-2" {
@@ -278,13 +278,13 @@ fn render_steam_page(
                 }
                 div class="grid grid-cols-1 gap-4" {
                     @for game in &top_games {
-                        div class="bg-gradient-to-r from-slate-800 to-slate-900 p-3 md:p-5 border border-slate-700 hover:border-primary-color transition-all duration-200 shadow-lg hover:shadow-xl" {
+                        div class="rounded-box bg-gradient-to-r from-slate-800 to-slate-900 p-3 md:p-5 border border-slate-700 hover:border-primary-color transition-all duration-200 shadow-lg hover:shadow-xl" {
                             div class="flex gap-4 items-center" {
                                 img
                                     src=(game.img_logo_url)
                                     onerror={"this.onerror=null; this.src='http://media.steampowered.com/steamcommunity/public/images/apps/"(game.appid)"/"(game.img_icon_url)".jpg';"}
                                     alt=(game.name)
-                                    class="w-12 h-12 md:w-16 md:h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
+                                    class="rounded-box w-12 h-12 md:w-16 md:h-16 border-2 border-slate-600 shadow-md shrink-0 object-cover";
 
                                 div class="flex-1 min-w-0" {
                                     h3 class="text-lg md:text-xl font-bold text-white truncate mb-2" {

@@ -198,26 +198,26 @@ fn render_chess_page(
                     div class="container mx-auto max-w-4xl h-full" {
                         h1 class="text-4xl md:text-6xl font-bold pb-4 md:pb-8" { (t.chess_title) }
                         div class="grid grid-cols-2 md:grid-cols-4 mb-6" {
-                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                            div class="rounded-box p-3 md:p-5 min-w-0 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-1 truncate" { (t.chess_current_rating) }
                                 p class="text-2xl md:text-3xl font-bold" { (current_rating) }
                             }
-                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                            div class="rounded-box p-3 md:p-5 min-w-0 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-1 truncate" { (t.chess_peak_rating) }
                                 p class="text-2xl md:text-3xl font-bold text-primary-color" { (peak_rating) }
                             }
-                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                            div class="rounded-box p-3 md:p-5 min-w-0 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-1 truncate" { (fill(t.chess_mode_games, &game_mode)) }
                                 p class="text-2xl md:text-3xl font-bold" { (total_games) }
                             }
-                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                            div class="rounded-box p-3 md:p-5 min-w-0 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-1 truncate" { (t.chess_total_games) }
                                 p class="text-2xl md:text-3xl font-bold" { (total_all_games) }
                             }
                         }
 
                         div class="grid grid-cols-3 mb-6" {
-                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                            div class="rounded-box p-3 md:p-5 min-w-0 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-2 truncate" { (t.chess_win_rate) }
                                 div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-emerald-500 rounded-full"
@@ -226,7 +226,7 @@ fn render_chess_page(
                                 p class="text-lg md:text-2xl font-bold text-emerald-400" { (format!("{:.2}%", win_rate)) }
                                 p class="text-zinc-600 text-xs mt-1" { (fill(t.chess_games_count, win_count)) }
                             }
-                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                            div class="rounded-box p-3 md:p-5 min-w-0 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-2 truncate" { (t.chess_draw_rate) }
                                 div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-primary-color rounded-full"
@@ -235,7 +235,7 @@ fn render_chess_page(
                                 p class="text-lg md:text-2xl font-bold text-primary-color" { (format!("{:.2}%", draw_rate)) }
                                 p class="text-zinc-600 text-xs mt-1" { (fill(t.chess_games_count, draw_count)) }
                             }
-                            div class="p-3 md:p-5 min-w-0 border border-shade-color" {
+                            div class="rounded-box p-3 md:p-5 min-w-0 border border-shade-color" {
                                 p class="text-zinc-500 text-xs uppercase tracking-wider md:tracking-widest mb-2 truncate" { (t.chess_loss_rate) }
                                 div class="w-full h-1 bg-shade-color rounded-full overflow-hidden mb-2" {
                                     div class="h-full bg-rose-500 rounded-full"
@@ -331,7 +331,7 @@ fn render_analysis_page(games: Vec<Game>, username: &str, t: &Texts) -> PreEscap
                 p class="text-primary-color text-sm font-semibold uppercase tracking-wider" { (t.chess_openings) }
             }
             div class="grid grid-cols-1 sm:grid-cols-2" {
-                div class="p-4 md:p-7 border border-shade-color border-l-2 border-l-zinc-400" {
+                div class="rounded-box p-4 md:p-7 border border-shade-color border-l-2 border-l-zinc-400" {
                     p class="text-gray-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2" {
                         span class="inline-block w-2 h-2 rounded-full bg-zinc-300" {}
                         (t.chess_as_white)
@@ -346,7 +346,7 @@ fn render_analysis_page(games: Vec<Game>, username: &str, t: &Texts) -> PreEscap
                         p class="text-zinc-600 text-base" { (t.chess_no_data) }
                     }
                 }
-                div class="p-4 md:p-7 border border-shade-color border-l-2 border-l-primary-color" {
+                div class="rounded-box p-4 md:p-7 border border-shade-color border-l-2 border-l-primary-color" {
                     p class="text-gray-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2" {
                         span class="inline-block w-2 h-2 rounded-full bg-primary-color" {}
                         (t.chess_as_black)
@@ -372,22 +372,22 @@ fn render_analysis_page(games: Vec<Game>, username: &str, t: &Texts) -> PreEscap
                     @let (border, badge_cls, result_label) = match (&game.winner, main_player_color) {
                         (Some(Winner::White), "white") | (Some(Winner::Black), "black") => (
                             "border-l-2 border-l-emerald-500",
-                            "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+                            "rounded-box bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
                             t.chess_win
                         ),
                         (Some(Winner::White), "black") | (Some(Winner::Black), "white") => (
                             "border-l-2 border-l-rose-500",
-                            "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+                            "rounded-box bg-rose-500/10 text-rose-400 border border-rose-500/20",
                             t.chess_loss
                         ),
                         (None, _) => (
                             "border-l-2 border-l-primary-color",
-                            "bg-primary-color/10 text-primary-color border border-primary-color/20",
+                            "rounded-box bg-primary-color/10 text-primary-color border border-primary-color/20",
                             t.chess_draw
                         ),
                         _ => (
                             "border-l-2 border-l-shade-color",
-                            "bg-shade-color text-zinc-400 border border-shade-color",
+                            "rounded-box bg-shade-color text-zinc-400 border border-shade-color",
                             t.chess_unknown
                         ),
                     };

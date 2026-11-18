@@ -13,6 +13,7 @@ pub const STATIC_DIR: &str = "./static";
 const STATIC_URL_PREFIX: &str = "/_static";
 const FONTS_DIR: &str = "fonts";
 const MAX_FAMILY_LEN: usize = 64;
+pub const MAX_RADIUS: u8 = 24;
 const DEFAULT_SITE_NAME: &str = "My digital garden";
 const MAX_NAME_LEN: usize = 80;
 const MAX_DESCRIPTION_LEN: usize = 300;
@@ -154,6 +155,8 @@ impl Default for Features {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Theme {
+    #[serde(default)]
+    pub radius: u8,
     pub colors: Colors,
     pub fonts: Fonts,
 }
@@ -338,6 +341,13 @@ impl SiteConfig {
     pub fn validate(&self) -> Vec<String> {
         let mut problems = self.identity.validate();
 
+        if self.theme.radius > MAX_RADIUS {
+            problems.push(format!(
+                "theme.radius must be between 0 and {MAX_RADIUS} pixels, got {}",
+                self.theme.radius
+            ));
+        }
+
         for (name, value) in self.theme.colors.entries() {
             if !is_hex_color(value) {
                 problems.push(format!(
@@ -413,7 +423,7 @@ impl SiteConfig {
             }
         }
 
-        css.push_str(":root{");
+        css.push_str(&format!(":root{{--radius-box:{}px;", self.theme.radius));
         for (name, value) in self.theme.colors.entries() {
             css.push_str(&format!("--color-{name}-color:{value};"));
         }
@@ -853,9 +863,42 @@ src = "fonts/tusker-grotesk/regular.woff2"
 
     #[test]
     fn configs_round_trip_through_toml() {
-        let config = valid();
+        let mut config = valid();
+        config.theme.radius = 6;
         let raw = toml::to_string(&config).unwrap();
         assert_eq!(SiteConfig::parse(&raw).unwrap(), config);
+    }
+
+    #[test]
+    fn the_radius_defaults_to_square_corners() {
+        let config = valid();
+        assert_eq!(config.theme.radius, 0);
+        assert!(config.theme_style().contains(":root{--radius-box:0px;"));
+
+        let raw = VALID.replace("[theme.colors]", "[theme]\nradius = 12\n\n[theme.colors]");
+        let config = SiteConfig::parse(&raw).unwrap();
+        assert_eq!(config.theme.radius, 12);
+        assert!(config.theme_style().contains("--radius-box:12px;"));
+    }
+
+    #[test]
+    fn the_radius_is_limited() {
+        assert!(problems_after(|c| c.theme.radius = MAX_RADIUS).is_empty());
+        assert_eq!(
+            problems_after(|c| c.theme.radius = MAX_RADIUS + 1),
+            vec!["theme.radius must be between 0 and 24 pixels, got 25"]
+        );
+
+        for bad in ["-1", "4.5", "\"8px\"", "300"] {
+            let raw = VALID.replace(
+                "[theme.colors]",
+                &format!("[theme]\nradius = {bad}\n\n[theme.colors]"),
+            );
+            assert!(
+                matches!(SiteConfig::parse(&raw), Err(SiteConfigError::Parse(_))),
+                "{bad}"
+            );
+        }
     }
 
     #[test]

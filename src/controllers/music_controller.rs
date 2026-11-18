@@ -44,7 +44,7 @@ async fn get_user_profile(
 fn render_spotify_profile(user: SpotifyUser, t: &Texts) -> PreEscaped<String> {
     html! {
         div class="flex flex-col w-full gap-4 p-4 md:p-6 lg:p-8 overflow-auto" {
-            div class="bg-background-color p-4 md:p-6 border border-shade-color border-l-[3px] border-l-primary-color" {
+            div class="rounded-box bg-background-color p-4 md:p-6 border border-shade-color border-l-[3px] border-l-primary-color" {
                 div class="flex items-center gap-4 md:gap-6" {
                     @if let Some(image) = user.images.first() {
                         a href=(user.external_urls.spotify) target="_blank" rel="noopener noreferrer" class="shrink-0" {
@@ -264,7 +264,7 @@ fn render_artists_list(top_artists: &TopArtistsResponse, t: &Texts) -> PreEscape
             @for artist in top_artists.items.iter() {
                 a href=(artist.external_urls.spotify) target="_blank" rel="noopener noreferrer"
                     style="background-color:#1F1F1F;"
-                    class="group h-[90px] p-3 md:p-4 flex items-center gap-3 md:gap-4 hover:brightness-125 transition-all duration-300 border border-transparent hover:border-primary-color" {
+                    class="rounded-box group h-[90px] p-3 md:p-4 flex items-center gap-3 md:gap-4 hover:brightness-125 transition-all duration-300 border border-transparent hover:border-primary-color" {
                     @if let Some(image) = artist.images.first() {
                         img src=(image.url)
                             class="w-14 h-14 shrink-0 rounded-full shadow-md" {}
@@ -301,7 +301,7 @@ fn render_tracks_list(top_tracks: &TopTracksResponse) -> PreEscaped<String> {
         div class="flex flex-col gap-2" {
             @for song in top_tracks.items.iter() {
                 div style="background-color:#1F1F1F;"
-                    class="group flex items-center justify-center h-[90px] border border-transparent hover:border-primary-color hover:brightness-125 transition-all duration-300" {
+                    class="rounded-box group flex items-center justify-center h-[90px] border border-transparent hover:border-primary-color hover:brightness-125 transition-all duration-300" {
                     div class="flex flex-1 min-w-0 overflow-hidden" {
                         iframe
                             src={(song.external_urls.spotify.replace("open.spotify.com/track", "open.spotify.com/embed/track"))"?utm_source=generator&theme=0"}
@@ -311,7 +311,7 @@ fn render_tracks_list(top_tracks: &TopTracksResponse) -> PreEscaped<String> {
                             frameborder="0"
                             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                             loading="lazy"
-                            style="border-radius:0px; display:block;" {}
+                            style="border-radius:var(--radius-box); display:block;" {}
                     }
                 }
             }
