@@ -59,6 +59,7 @@ impl Integrations {
 
 pub struct AppState {
     pub garden_path: String,
+    pub assets_dir: Option<std::path::PathBuf>,
     pub site: SiteConfig,
     pub features: Features,
     pub shell: PageShell,
@@ -82,6 +83,7 @@ impl AppState {
 
         AppState {
             garden_path: garden_path.to_string(),
+            assets_dir: None,
             site: site.clone(),
             features,
             shell: PageShell::from_template_dir(&shown),
@@ -89,6 +91,10 @@ impl AppState {
             admin: None,
             post_search_engine,
         }
+    }
+
+    pub fn with_assets(self, assets_dir: Option<std::path::PathBuf>) -> AppState {
+        AppState { assets_dir, ..self }
     }
 
     pub fn with_admin(self, admin: admin_controller::AdminAuth) -> AppState {

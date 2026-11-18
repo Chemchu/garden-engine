@@ -94,6 +94,9 @@ jobs:
           docker run --rm guslee:test test -d ./templates
           docker run --rm guslee:test test -f ./site.toml
           docker run --rm guslee:test test -s ./garden-dates.txt
+
+      - name: Check the content
+        run: docker run --rm guslee:test ./guslee check
       
       - name: Start container
         run: |

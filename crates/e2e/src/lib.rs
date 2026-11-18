@@ -93,6 +93,18 @@ impl TestApp {
             Features::default(),
             Some(admin_credentials()),
             false,
+            None,
+        )
+        .await
+    }
+
+    pub async fn spawn_with_assets(assets_dir: &std::path::Path) -> TestApp {
+        TestApp::spawn_with_options(
+            GARDEN_PATH,
+            Features::default(),
+            None,
+            true,
+            Some(assets_dir.to_path_buf()),
         )
         .await
     }
@@ -102,7 +114,7 @@ impl TestApp {
         features: Features,
         admin: Option<AdminCredentials>,
     ) -> TestApp {
-        TestApp::spawn_with_options(garden_path, features, admin, true).await
+        TestApp::spawn_with_options(garden_path, features, admin, true, None).await
     }
 
     async fn spawn_with_options(
@@ -110,6 +122,7 @@ impl TestApp {
         features: Features,
         admin: Option<AdminCredentials>,
         with_integrations: bool,
+        assets_dir: Option<std::path::PathBuf>,
     ) -> TestApp {
         enter_workspace_root();
 
@@ -156,7 +169,8 @@ impl TestApp {
             Integrations::default()
         };
         let mut app_state =
-            AppState::new(garden_path, &site, Arc::new(search_engine), integrations);
+            AppState::new(garden_path, &site, Arc::new(search_engine), integrations)
+                .with_assets(assets_dir);
         if let Some(credentials) = admin {
             let store = AdminStore::new(credentials).await.expect("valid admin");
             let admin = AdminAuth::new(

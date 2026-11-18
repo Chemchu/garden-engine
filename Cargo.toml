@@ -46,6 +46,9 @@ chrono.workspace = true
 tokio = { workspace = true, features = ["time"] }
 dotenvy = "0.15.7"
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [profile.dev]
 opt-level = 0
 incremental = true

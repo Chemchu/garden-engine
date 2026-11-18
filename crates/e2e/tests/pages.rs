@@ -258,9 +258,8 @@ async fn metadata_panel_shows_frontmatter_and_source_link() {
 
     assert!(body.contains("Notes about the fog"));
     assert!(body.contains("Everything about the fog"));
-    assert!(body.contains(&format!(
-        "{REPO_SOURCE}/crates/e2e/fixtures/garden/notes/fog.md"
-    )));
+    assert!(body.contains(&format!("{REPO_SOURCE}/garden/notes/fog.md?plain=1")));
+    assert!(!body.contains("fixtures"));
     assert!(draft.contains("No metadata found for this post."));
 }
 

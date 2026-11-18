@@ -596,7 +596,7 @@ async fn translations_share_the_path_of_the_original_post() {
         spanish
             .metadata
             .post_source_url
-            .ends_with("/notes/first_note.es.md")
+            .ends_with("/blob/main/garden/notes/first_note.es.md")
     );
     assert_eq!(english.lang, "en");
     assert_eq!(english.metadata.title, "First note about Silent Hill");

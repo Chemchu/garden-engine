@@ -1,3 +1,6 @@
+use std::path::Path;
+
+use actix_files::Files;
 use actix_web::{
     App, Error,
     body::MessageBody,
@@ -8,11 +11,14 @@ use actix_web::{
 
 use crate::controllers::AppState;
 
+pub mod content;
 pub mod controllers;
 pub mod helpers;
 pub mod i18n;
 pub use site_config;
 pub use site_config::settings;
+
+const STATIC_PREFIX: &str = "/_static";
 
 pub fn create_app(
     app_state: web::Data<AppState>,
@@ -30,12 +36,13 @@ pub fn create_app(
     let spotify = app_state.integrations.spotify.clone();
     let steam = app_state.integrations.steam.clone();
     let admin = app_state.admin.clone();
+    let static_files = static_files(app_state.assets_dir.as_deref());
 
     App::new()
         .wrap(from_fn(i18n::locale_headers))
         .wrap(Compress::default())
         .wrap(Logger::new("%s %r - %Dms"))
-        .service(actix_files::Files::new("/_static", "./static"))
+        .service(static_files)
         .app_data(app_state)
         .configure(controllers::posts_controller::configure_services)
         .configure(|cfg| {
@@ -73,4 +80,12 @@ pub fn create_app(
             }
         })
         .service(controllers::fallback_controller::fallback_route) // This service should be last one in the list because it matches any string
+}
+
+pub fn static_files(assets_dir: Option<&Path>) -> Files {
+    let engine = Files::new(STATIC_PREFIX, site_config::STATIC_DIR);
+    match assets_dir {
+        Some(dir) => Files::new(STATIC_PREFIX, dir).default_handler(engine),
+        None => engine,
+    }
 }

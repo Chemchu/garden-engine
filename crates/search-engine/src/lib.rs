@@ -17,6 +17,7 @@ use crate::utils::{
     DEFAULT_LANG, Post, extract_full_metadata, localize, split_translation, strip_frontmatter,
 };
 
+pub mod check;
 pub mod git_dates;
 pub mod links;
 pub mod tags;
@@ -82,7 +83,7 @@ impl PostsSearchEngine {
                 match fs::read_to_string(path) {
                     Ok(content) => {
                         let Some(mut metadata) =
-                            extract_full_metadata(repo_path, full_path.as_str())
+                            extract_full_metadata(repo_path, &full_path, &source_path)
                         else {
                             eprintln!(
                                 "Skipping {}: missing or invalid frontmatter",

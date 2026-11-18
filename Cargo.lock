@@ -2050,6 +2050,7 @@ dependencies = [
  "simple_logger",
  "site-config",
  "surrealdb",
+ "tempfile",
  "tokio",
 ]
 
