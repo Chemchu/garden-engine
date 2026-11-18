@@ -310,7 +310,7 @@ pub async fn render(
 
                 section class="flex flex-col gap-4" {
                     h2 class="text-2xl" { (t.admin_fonts) }
-                    p class="text-sm opacity-70" { (t.admin_font_hint) }
+                    p data-font-hint class="text-sm opacity-70" { (t.admin_font_hint) }
                     @if catalog.is_none() {
                         p role="status" class="text-primary-color" { (t.admin_font_catalog_down) }
                     }
@@ -479,6 +479,7 @@ fn font_fieldset(
             spellcheck="false"
             maxlength=(MAX_FONT_INPUT)
             class=(INPUT_CLASS);
+            (font_picker(role, label, current, t))
             div class="flex flex-wrap gap-4" {
                 label class="flex flex-col gap-1" {
                     span class="text-sm" { (t.admin_font_weight) }
@@ -501,6 +502,68 @@ fn font_fieldset(
             }
         }
     }
+}
+
+fn font_picker(role: &str, label: &str, current: &Font, t: &Texts) -> Markup {
+    let list_id = format!("{role}-font-list");
+    html! {
+        div
+        data-font-picker=(role)
+        data-keep-label=(fill(t.admin_font_keep_current, &current.family))
+        data-weights-label=(t.admin_font_weights)
+        hidden
+        class="relative flex flex-col" {
+            button
+            type="button"
+            data-picker-toggle
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-label=(fill(t.admin_font_choose, label))
+            class=(format!("{INPUT_CLASS} flex items-center justify-between gap-2 text-left cursor-pointer")) {
+                span data-picker-label class="truncate text-lg" {}
+                span aria-hidden="true" class="opacity-70" { "▾" }
+            }
+            div
+            data-picker-panel
+            hidden
+            class="rounded-box absolute top-full left-0 right-0 z-20 mt-1 flex flex-col gap-2 border border-shade-color bg-background-color p-2 shadow-lg" {
+                input
+                type="search"
+                data-picker-search
+                role="combobox"
+                aria-expanded="true"
+                aria-controls=(list_id)
+                aria-autocomplete="list"
+                aria-label=(t.admin_font_search)
+                placeholder=(t.admin_font_search)
+                autocomplete="off"
+                spellcheck="false"
+                class=(INPUT_CLASS);
+                div role="group" aria-label=(t.admin_font_categories) class="flex flex-wrap gap-1" {
+                    @for (category, name) in font_categories(t) {
+                        button
+                        type="button"
+                        data-picker-category=(category)
+                        aria-pressed=(category.is_empty())
+                        class="rounded-box border border-shade-color px-2 text-sm cursor-pointer aria-pressed:border-primary-color aria-pressed:text-primary-color" { (name) }
+                    }
+                }
+                ul id=(list_id) role="listbox" aria-label=(label) class="max-h-72 overflow-auto flex flex-col" {}
+                p data-picker-empty hidden class="text-sm opacity-70 px-2" { (t.admin_font_no_match) }
+            }
+        }
+    }
+}
+
+fn font_categories(t: &Texts) -> [(&'static str, &str); 6] {
+    [
+        ("", t.admin_font_category_all),
+        ("sans-serif", t.admin_font_category_sans_serif),
+        ("serif", t.admin_font_category_serif),
+        ("display", t.admin_font_category_display),
+        ("handwriting", t.admin_font_category_handwriting),
+        ("monospace", t.admin_font_category_monospace),
+    ]
 }
 
 fn color_label<'a>(t: &'a Texts, name: &str) -> &'a str {
@@ -730,6 +793,41 @@ mod tests {
         assert!(html.contains("Current: Iosevka"));
         assert!(html.contains(r#"value="&quot;&gt;&lt;b&gt;""#));
         assert!(!html.contains("disabled"));
+    }
+
+    #[test]
+    fn font_pickers_start_hidden_until_the_script_enhances_them() {
+        let mut current = site().theme.fonts.body;
+        current.family = "Ana's <Font>".to_string();
+        let html = font_picker("body", "Body text", &current, Locale::En.texts()).into_string();
+
+        assert!(html.contains(r#"data-font-picker="body""#));
+        assert!(html.contains(r#"data-keep-label="Keep the current font (Ana's &lt;Font&gt;)""#));
+        assert!(html.contains(r#"data-weights-label="{} weights" hidden"#));
+        assert!(html.contains(r#"aria-label="Body text: choose a font""#));
+        assert!(html.contains(r#"aria-controls="body-font-list""#));
+        assert!(html.contains(r#"<ul id="body-font-list" role="listbox" aria-label="Body text""#));
+        assert!(html.contains(r#"data-picker-category="" aria-pressed="true""#));
+        for category in ["sans-serif", "serif", "display", "handwriting", "monospace"] {
+            assert!(
+                html.contains(&format!(
+                    r#"data-picker-category="{category}" aria-pressed="false""#
+                )),
+                "{category}"
+            );
+        }
+        assert!(!html.contains("name="));
+    }
+
+    #[test]
+    fn every_locale_names_the_font_categories() {
+        for locale in Locale::ALL {
+            let names: Vec<&str> = font_categories(locale.texts())
+                .iter()
+                .map(|(_, name)| *name)
+                .collect();
+            assert!(names.iter().all(|name| !name.is_empty()), "{names:?}");
+        }
     }
 
     #[test]

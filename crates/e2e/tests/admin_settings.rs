@@ -144,6 +144,9 @@ async fn the_settings_page_starts_from_the_current_site() {
     ));
     assert!(page.contains(r#""id":"iosevka","family":"Iosevka","weights":[400,600],"category":"monospace","subset":"latin""#));
     assert!(page.contains(r#"<script src="/_static/admin-settings.js"></script>"#));
+    assert!(page.contains(r#"data-font-picker="body""#));
+    assert!(page.contains(r#"data-font-picker="heading""#));
+    assert!(page.contains(r#"data-keep-label="Keep the current font (Tusker Grotesk)""#));
     assert!(page.contains(r#"data-font-cdn="https://cdn.jsdelivr.net/fontsource/fonts""#));
     assert!(!page.contains("font catalog is unavailable"));
 }
