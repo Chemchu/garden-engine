@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Colors, Features, FontFallback, Identity, SiteConfig, is_hex_color};
+use crate::{Colors, Features, FontFallback, Identity, MAX_RADIUS, SiteConfig, is_hex_color};
 
 pub const ISSUE_TITLE: &str = "Site settings update";
 pub const ISSUE_LABEL: &str = "site-settings";
@@ -16,6 +16,8 @@ const MAX_FONT_ID_LEN: usize = 64;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SettingsRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub radius: Option<u8>,
     #[serde(rename = "site")]
     pub identity: Identity,
     pub colors: Colors,
@@ -59,6 +61,7 @@ impl FontRequest {
 impl SettingsRequest {
     pub fn keeping(site: &SiteConfig) -> SettingsRequest {
         SettingsRequest {
+            radius: None,
             identity: site.identity.clone(),
             colors: site.theme.colors.clone(),
             fonts: FontRequests {
@@ -70,7 +73,11 @@ impl SettingsRequest {
     }
 
     pub fn changes_anything(&self, site: &SiteConfig) -> bool {
-        self != &SettingsRequest::keeping(site)
+        let request = SettingsRequest {
+            radius: self.radius.filter(|radius| *radius != site.theme.radius),
+            ..self.clone()
+        };
+        request != SettingsRequest::keeping(site)
     }
 
     pub fn parse(raw: &str) -> Result<SettingsRequest, Vec<String>> {
@@ -107,6 +114,14 @@ impl SettingsRequest {
 
     pub fn validate(&self) -> Vec<String> {
         let mut problems = self.identity.validate();
+
+        if let Some(radius) = self.radius
+            && radius > MAX_RADIUS
+        {
+            problems.push(format!(
+                "radius must be between 0 and {MAX_RADIUS} pixels, got {radius}"
+            ));
+        }
 
         for (name, value) in self.colors.entries() {
             if !is_hex_color(value) {
@@ -305,6 +320,45 @@ mod tests {
 
         assert!(!SettingsRequest::keeping(&site).changes_anything(&site));
         assert!(request().changes_anything(&site));
+    }
+
+    #[test]
+    fn the_radius_is_optional_and_only_counts_when_it_changes() {
+        let site = site();
+        let keeping = SettingsRequest::keeping(&site);
+        assert!(!keeping.to_toml().contains("radius"));
+
+        let same = SettingsRequest {
+            radius: Some(site.theme.radius),
+            ..keeping.clone()
+        };
+        assert!(!same.changes_anything(&site));
+
+        let rounder = SettingsRequest {
+            radius: Some(site.theme.radius + 8),
+            ..keeping
+        };
+        assert!(rounder.changes_anything(&site));
+        let raw = rounder.to_toml();
+        assert!(raw.starts_with(&format!("radius = {}\n", site.theme.radius + 8)));
+        assert_eq!(SettingsRequest::parse(&raw).unwrap(), rounder);
+    }
+
+    #[test]
+    fn the_requested_radius_is_limited() {
+        let request = SettingsRequest {
+            radius: Some(MAX_RADIUS + 1),
+            ..SettingsRequest::keeping(&site())
+        };
+        assert_eq!(
+            request.validate(),
+            vec!["radius must be between 0 and 24 pixels, got 25"]
+        );
+        assert!(
+            SettingsRequest::parse(&request.to_toml().replace("radius = 25", "radius = -1"))
+                .unwrap_err()[0]
+                .starts_with("could not parse the request")
+        );
     }
 
     #[test]

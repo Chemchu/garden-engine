@@ -129,6 +129,9 @@ pub async fn apply(
     config.identity = request.identity.clone();
     config.theme.colors = request.colors.clone();
     config.features = request.features;
+    if let Some(radius) = request.radius {
+        config.theme.radius = radius;
+    }
     if let FontRequest::Keep {
         fallback: Some(fallback),
     } = request.fonts.body
@@ -344,6 +347,13 @@ fn summarize(
         out.push_str("**Colors**\n\n| Color | Before | After |\n| --- | --- | --- |\n");
         out.push_str(&colors.join("\n"));
         out.push_str("\n\n");
+    }
+
+    if before.theme.radius != after.theme.radius {
+        out.push_str(&format!(
+            "**Corners**\n\n- radius: {}px → {}px\n\n",
+            before.theme.radius, after.theme.radius
+        ));
     }
 
     let fonts: Vec<String> = before

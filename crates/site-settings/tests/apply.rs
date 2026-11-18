@@ -687,6 +687,61 @@ async fn files_that_are_not_woff2_are_refused() {
 }
 
 #[tokio::test]
+async fn the_corner_radius_is_applied_and_summarized() {
+    let repo = Repo::new();
+    let (_server, fontsource) = fontsource().await;
+    let mut request = request(&repo);
+    request.radius = Some(8);
+
+    let outcome = apply(
+        &request,
+        &repo.config(),
+        &repo.static_dir(),
+        &fontsource,
+        None,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(outcome.config.theme.radius, 8);
+    assert!(
+        outcome
+            .summary
+            .contains("**Corners**\n\n- radius: 0px → 8px")
+    );
+    assert!(render_config(&outcome.config).contains("[theme]\nradius = 8\n"));
+    assert!(!outcome.summary.contains("**Colors**"));
+}
+
+#[tokio::test]
+async fn requests_without_a_radius_keep_the_current_one() {
+    let repo = Repo::new();
+    std::fs::write(
+        repo.config_path(),
+        CURRENT.replace("[theme.colors]", "[theme]\nradius = 6\n\n[theme.colors]"),
+    )
+    .unwrap();
+    let (_server, fontsource) = fontsource().await;
+    let raw = request(&repo).to_toml();
+    assert!(!raw.contains("radius"));
+    let mut request = SettingsRequest::parse(&raw).unwrap();
+    request.colors.accent = "#123456".to_string();
+
+    let outcome = apply(
+        &request,
+        &repo.config(),
+        &repo.static_dir(),
+        &fontsource,
+        None,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(outcome.config.theme.radius, 6);
+    assert!(!outcome.summary.contains("**Corners**"));
+}
+
+#[tokio::test]
 async fn requests_that_change_nothing_or_are_invalid_are_refused() {
     let repo = Repo::new();
     let (_server, fontsource) = fontsource().await;

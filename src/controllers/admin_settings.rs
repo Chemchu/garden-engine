@@ -165,6 +165,7 @@ async fn build_request(
     let heading = resolve(&values.heading, &site.theme.fonts.heading).await;
 
     let request = SettingsRequest {
+        radius: None,
         identity: values.identity.clone(),
         colors: values.colors.clone(),
         fonts: FontRequests { body, heading },
