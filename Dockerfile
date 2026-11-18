@@ -7,9 +7,9 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder 
 COPY --from=planner /usr/src/app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json --bin garden-engine --bin site-settings
+RUN cargo chef cook --release --recipe-path recipe.json --workspace --bin garden-engine --bin site-settings
 COPY . .
-RUN cargo build --release --bin garden-engine --bin site-settings
+RUN cargo build --release --workspace --bin garden-engine --bin site-settings
 RUN cd starter/garden && git log --format=%x00%cs --name-only --relative -- . > ../../garden-dates.txt || true
 
 # Runtime image - same base as builder
